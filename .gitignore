@@ -1,0 +1,27 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# virtual environments
+.venv
+
+# caches
+.ruff_cache/
+.pytest_cache/
+
+# coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# any jetbrains IDE files
+.idea/
+
+# other
+.DS_Store
+data/
+.claude/

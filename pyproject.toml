@@ -1,0 +1,109 @@
+[project]
+name = "cortical-peaks-challenge-2026"
+version = "0.1.0rc1"
+description = "Arcade games for your brain"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pygame-ce>=2.5.7",
+]
+
+[dependency-groups]
+dev = [
+    "prek>=0.3.12",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.14.14",
+    "rust-just>=1.50.0",
+    "ty>=0.0.13",
+]
+
+[project.scripts]
+cpc-server = "launcher:main_server"
+cpc-spectator = "launcher:main_spectator"
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["games", "shared", "launcher"]
+module-root = ""
+
+[tool.uv]
+# make sure we are using a reasonably modern version of uv
+required-version = ">=0.10.0"
+
+[tool.ruff]
+exclude = [
+    ".git",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "venv",
+]
+line-length = 120
+indent-width = 4
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D",
+    "COM812",  # no trailing commas
+    "ERA001",  # Disallows having commented out code TODO: remove this rule
+    "S311",    # Warns against using non-cryptographically-safe PRNGs - this is irrelevant for us
+    "S101",    # Warns against using asserts since they will be removed when using optimization flags, but this is fine
+    "TD003",   # Warns that a TODO doesn't not have a link to an issue, this will just add more unnecessary housekeeping
+    "FIX002",  # Warns that a TODO should be fixed...lol yea thanks bro
+    "FBT003",  # Warns against non-positional boolean arguments to a method, while valid, we can't rewrite other libs that use them
+    "TRY300",  # recommends try-except-else which i dont think is particularly better?
+    "FBT002",  # disallows using a postional boolean arguemnt
+    "PLR0913", # Too many arguments in function definition - Some functions need more than 5 arguments
+    "E731",    # For now we need to use lambda expressions
+    "PLR2004", # Warns against magic numbers, but defining them as constants would be unnecessary
+    "ISC001",  # conflicts with ruff formatting
+    "C901",    # Too complex - game functions can be long
+    "PLR0912", # Too many branches - we use big switch statements for game logic
+    "PLR0915", # Too many statements - game functions can be long
+    "TRY301",  # abstract raise to inner function - our raise-inside-except pattern is intentional
+    "TD002",   # missing author in TODO - we don't require author attribution in TODOs
+    "S104",    # binding to all interfaces - intentional for the game server
+    "BLE001",  # broad exception catch - intentional in server dispatch loops to keep the thread alive
+]
+# allow fix for all enabled rules (when `--fix`) is provided
+fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use throwaway literals (tokens, sample payloads) and assertions that the security
+# and abstraction lints flag as false positives; relax those rules for test files only.
+"tests/**" = [
+    "S105", # hardcoded "password" - test tokens are not secrets
+    "S106", # hardcoded "password" function argument - same as above
+]
+
+[tool.ruff.format]
+# like black, use double quotes for strings
+quote-style = "double"
+# like black, indent with spaces, rather than tabs
+indent-style = "space"
+# like black, automatically detect the appropriate line ending
+line-ending = "auto"
+
+# Coverage is always reported (with missing line numbers) as a visibility aid. The fail-under is a
+# low safety floor that only trips on a big regression, not a target. Measure the whole app so it is
+# clear which modules - including the pygame rendering and threaded-UDP networking - are not tested.
+[tool.pytest.ini_options]
+addopts = "--cov --cov-report=term-missing --cov-fail-under=35"
+
+[tool.coverage.run]
+source = ["games", "shared", "launcher"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+
