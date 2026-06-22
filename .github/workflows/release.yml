@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (${{ matrix.mode }}, ${{ matrix.os }})
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {
+              os: macos-latest,
+              mode: server,
+              artifact: cpc-server-macos-arm64,
+            }
+          - {
+              os: macos-latest,
+              mode: spectator,
+              artifact: cpc-spectator-macos-arm64,
+            }
+          - {
+              os: windows-latest,
+              mode: server,
+              artifact: cpc-server-windows-x86_64,
+            }
+          - {
+              os: windows-latest,
+              mode: spectator,
+              artifact: cpc-spectator-windows-x86_64,
+            }
+          - {
+              os: ubuntu-latest,
+              mode: server,
+              artifact: cpc-server-linux-x86_64,
+            }
+          - {
+              os: ubuntu-latest,
+              mode: spectator,
+              artifact: cpc-spectator-linux-x86_64,
+            }
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Read Python version
+        id: pyver
+        shell: bash
+        run: echo "version=$(cat .python-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Build project wheel
+        run: uv build --wheel --out-dir dist/wheel
+
+      - name: Download pygame-ce wheel
+        shell: bash
+        run: |
+          uv run --with pip -- python -m pip download "pygame-ce>=2.5.7" \
+            --only-binary :all: --no-deps \
+            --python-version ${{ steps.pyver.outputs.version }} \
+            -d dist/pygame_dl/
+
+      - name: Build fat wheel (project + pygame-ce)
+        shell: bash
+        run: |
+          OUR=$(ls "$GITHUB_WORKSPACE/dist/wheel/cortical_peaks_challenge_2026-"*.whl | head -1)
+          DEP=$(ls dist/pygame_dl/pygame_ce-*.whl | head -1)
+          WHEEL=$(uv run python scripts/fat_wheel.py "$OUR" "$DEP" "$GITHUB_WORKSPACE/dist/")
+          echo "WHEEL=$WHEEL" >> "$GITHUB_ENV"
+
+      - name: Compute version (strip leading v)
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # v1.94.1
+        with:
+          toolchain: stable
+
+      - name: Build PyApp binary
+        run: cargo install pyapp --version 0.29.0 --locked --root dist --force
+        env:
+          PYAPP_PROJECT_NAME: cortical-peaks-challenge-2026
+          PYAPP_PROJECT_VERSION: ${{ env.VERSION }}
+          PYAPP_PYTHON_VERSION: ${{ steps.pyver.outputs.version }}
+          PYAPP_EXEC_SPEC: launcher:main_${{ matrix.mode }}
+          PYAPP_DISTRIBUTION_EMBED: "true"
+          PYAPP_PROJECT_PATH: ${{ env.WHEEL }}
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: mv dist/bin/pyapp dist/bin/${{ matrix.artifact }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Move-Item dist\bin\pyapp.exe "dist\bin\${{ matrix.artifact }}.exe"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/bin/${{ matrix.artifact }}*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        with:
+          generate_release_notes: true
+          files: artifacts/**

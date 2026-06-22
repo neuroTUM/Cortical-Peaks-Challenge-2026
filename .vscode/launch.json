@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/launcher.py",
+            "args": ["--target", "server", "--debug"],
+            "python": "${workspaceFolder}/.venv/bin/python"
+        },
+        {
+            "name": "Debug Spectator",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/launcher.py",
+            "args": ["--target", "spectator", "--debug"],
+            "python": "${workspaceFolder}/.venv/bin/python"
+        }
+    ]
+}
