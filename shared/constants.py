@@ -56,10 +56,10 @@ def _init_fonts() -> tuple[pygame.font.Font, pygame.font.Font, pygame.font.Font,
 TITLE_FONT, HEADING_FONT, TEXT_FONT, SUBTEXT_FONT = _init_fonts()
 
 # common colors
-BACKGROUND_COLOR: Final[str] = "gray25"
+BACKGROUND_COLOR: Final[str] = "#607EA8"
 TEXT_COLOR: Final[str] = "white"
-ACCENT_COLOR: Final[str] = "red"
-DISABLED_COLOR: Final[str] = "gray50"
+ACCENT_COLOR: Final[str] = "#F8BD29"
+DISABLED_COLOR: Final[str] = "#2D3136"
 STATUS_OK_COLOR: Final[tuple[int, int, int]] = (0, 220, 0)
 STATUS_ERROR_COLOR: Final[tuple[int, int, int]] = (220, 50, 50)
 HIGHLIGHT_COLOR: Final[tuple[int, int, int]] = (220, 200, 0)
