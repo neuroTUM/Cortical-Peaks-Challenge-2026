@@ -1,7 +1,14 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from games.pong.config import pong_config
-from games.pong.state import PongState, PongStateAdapter, create_initial_state
-from games.pong.update import update_game_state
+from games.pong.state import PaddleState, PongState, PongStateAdapter, PuckState, create_initial_state
+from games.pong.update import _check_paddle_collision, update_game_state
 from shared.constants import HEIGHT, WIDTH
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def _running_state(player1: str = "p1", player2: str = "p2") -> PongState:
@@ -233,6 +240,78 @@ def test_paddle_collision_reverses_and_deflects_down() -> None:
     result = update_game_state(state, None)
     assert result.puck.dir_x == 1  # bounced off the paddle
     assert result.puck.dir_y == 1  # deflected downward
+
+
+def test_paddle_collision_does_not_oscillate_while_puck_lingers_inside() -> None:
+    # Regression: with puck_step_x < paddle_width the puck can land inside the
+    # paddle and stay overlapping for several frames. The collision must reflect
+    # the puck once, then leave dir_x alone while it slides back out - otherwise
+    # it flips every frame and vibrates in place against the paddle face.
+    state = _running_state()
+    lp = state.left_paddle
+    puck = state.puck
+    step = pong_config.puck_step_x
+    puck.dir_x = -1
+    puck.y = lp.y + 10
+    puck.x = lp.x + lp.width - 5  # heading left into the right face of the paddle
+
+    # Frame 1: contact -> reflect to rightward (away from the paddle).
+    puck.x += puck.dir_x * step
+    _check_paddle_collision(puck, lp)
+    assert puck.dir_x == 1
+
+    # Frame 2: still overlapping (step < paddle width) but now moving away.
+    # Must NOT flip back to leftward.
+    puck.x += puck.dir_x * step
+    _check_paddle_collision(puck, lp)
+    assert puck.dir_x == 1
+
+
+def _lodged_inside_left_paddle() -> PongState:
+    # A reachable gamestate: puck heading left, lodged inside the left paddle's
+    # face. Because puck_step_x (20) < paddle_width (40) the puck stays
+    # overlapping for several frames - the exact regime that used to vibrate.
+    state = _running_state()
+    lp = state.left_paddle
+    state.puck.dir_x = -1
+    state.puck.dir_y = 0
+    state.puck.y = lp.y + lp.height // 2
+    state.puck.x = lp.x + lp.width - 5
+    return state
+
+
+def _count_dir_x_flips(state: PongState, ticks: int = 40) -> int:
+    flips = 0
+    prev = state.puck.dir_x
+    for _ in range(ticks):
+        state.puck.move_counter = pong_config.puck_move_interval - 1
+        state = update_game_state(state, None, pvp=True)
+        if state.puck.dir_x != prev:
+            flips += 1
+            prev = state.puck.dir_x
+    return flips
+
+
+def test_lodged_puck_stays_stable_across_full_loop() -> None:
+    # Current code: the puck bounces off the paddle exactly once and leaves.
+    # It never reaches the far paddle in 40 ticks, so 1 flip means no vibration.
+    flips = _count_dir_x_flips(_lodged_inside_left_paddle())
+    assert flips <= 1
+
+
+def test_lodged_puck_would_vibrate_without_the_velocity_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Counterfactual on the SAME gamestate: restore the pre-fix collision (flip
+    # on any overlap, no velocity gate) and the puck flips direction on nearly
+    # every frame - proving the scenario is a real trigger and the gate prevents it.
+    def naive_collision(puck: PuckState, paddle: PaddleState) -> None:
+        pr = paddle.x + paddle.width
+        pb = paddle.y + paddle.height
+        if puck.x < pr and puck.x + puck.size > paddle.x and puck.y < pb and puck.y + puck.size > paddle.y:
+            puck.dir_x = -puck.dir_x
+
+    monkeypatch.setattr("games.pong.update._check_paddle_collision", naive_collision)
+    flips = _count_dir_x_flips(_lodged_inside_left_paddle())
+    assert flips >= 10
 
 
 def test_paddle_collision_deflects_up() -> None:
