@@ -122,7 +122,17 @@ def _check_paddle_collision(puck: PuckState, paddle: PaddleState) -> None:
     paddle_right = paddle.x + paddle.width
     paddle_bottom = paddle.y + paddle.height
 
-    if puck.x < paddle_right and puck_right > paddle.x and puck.y < paddle_bottom and puck_bottom > paddle.y:
+    overlapping = puck.x < paddle_right and puck_right > paddle.x and puck.y < paddle_bottom and puck_bottom > paddle.y
+    if overlapping:
+        # Only bounce a puck that is heading toward this paddle's side. With
+        # puck_step_x < paddle_width the puck can land inside the paddle and stay
+        # overlapping for several frames; without this gate dir_x flips every
+        # frame and the puck vibrates in place instead of bouncing off cleanly.
+        paddle_on_left = paddle.x + paddle.width / 2 < WIDTH / 2
+        heading_into_paddle = puck.dir_x < 0 if paddle_on_left else puck.dir_x > 0
+        if not heading_into_paddle:
+            return
+
         puck.dir_x = -puck.dir_x
 
         # Deflect vertical direction based on where the puck hit the paddle face
