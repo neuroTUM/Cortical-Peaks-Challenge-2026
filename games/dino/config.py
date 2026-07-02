@@ -17,14 +17,13 @@ class DinoConfig:
     # Cactus dimensions
     # Kept at 1 grid unit so the jump safe-press window exceeds the dino's width, which lets the
     # zone marker be exact: any part of the dino touching the carpet guarantees a clear.
-    cactus_width: int = 1
-    cactus_height: int = 2
+    cactus_width: float = 1.2
+    cactus_height: float = 3.2
 
     # Bird dimensions (spawn height is derived from dino physics - see spawn_bird).
     # Tall enough that its top sits above the jump apex, so a bird can only be ducked, never jumped.
-    bird_width: int = 1
-    bird_height: int = 4
-
+    bird_width: float = 1.8
+    bird_height: float = 2.8
     # Cloud dimensions & spawn range
     cloud_width: int = 2
     cloud_height: int = 2
