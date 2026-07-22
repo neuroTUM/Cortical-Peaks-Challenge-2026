@@ -30,6 +30,8 @@ class GameType(StrEnum):
     PONG = "pong"
     PONG_AI = "pong_ai"
     DINO_JUMP = "dino_jump"
+    SKI = "ski"
+    SKI_DYN = "ski_dyn"
 
 
 _GAME_BYTE: dict[GameType, int] = {
@@ -37,17 +39,21 @@ _GAME_BYTE: dict[GameType, int] = {
     GameType.PONG: 2,
     GameType.PONG_AI: 3,
     GameType.DINO_JUMP: 4,
+    GameType.SKI: 5,
+    GameType.SKI_DYN: 6,
 }
 _BYTE_GAME: dict[int, GameType] = {
     1: GameType.DINO,
     2: GameType.PONG,
     3: GameType.PONG_AI,
     4: GameType.DINO_JUMP,
+    5: GameType.SKI,
+    6: GameType.SKI_DYN,
 }
 
 # Session game field: "" = no game, "dino" / "pong" / "pong_ai" / "dino_jump" as stored in SessionInfo.game
-_SESSION_GAME_BYTE: dict[str, int] = {"": 0, "dino": 1, "pong": 2, "pong_ai": 3, "dino_jump": 4}
-_BYTE_SESSION_GAME: dict[int, str] = {0: "", 1: "dino", 2: "pong", 3: "pong_ai", 4: "dino_jump"}
+_SESSION_GAME_BYTE: dict[str, int] = {"": 0, "dino": 1, "pong": 2, "pong_ai": 3, "dino_jump": 4, "ski": 5, "ski_dyn": 6}
+_BYTE_SESSION_GAME: dict[int, str] = {0: "", 1: "dino", 2: "pong", 3: "pong_ai", 4: "dino_jump", 5: "ski", 6: "ski_dyn"}
 
 _FMT_SESSION_ENTRY = "!16s16sBB"  # uid + display_name + game_byte + bci_connected = 34 bytes
 _SESSION_ENTRY_SIZE = struct.calcsize(_FMT_SESSION_ENTRY)

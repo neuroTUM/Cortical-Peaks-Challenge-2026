@@ -6,6 +6,7 @@ class Game(StrEnum):
     PONG = "pong"
     WHEELCHAIR = "wheelchair"
     ARCADE = "arcade"
+    SKI = "ski"
 
 
 class Scene(StrEnum):
@@ -19,6 +20,7 @@ class Scene(StrEnum):
     CONNECTION = "connection"
     SPECTATOR_CONNECTION = "spectator_connection"
     SESSION_PICKER = "session_picker"
+    SKI_GAME = "ski_game"
     QUIT = "quit"
 
 
@@ -28,6 +30,7 @@ _GAME_SCENE_MAP: list[tuple[Game, list[Scene]]] = [
     (Game.PONG, [Scene.PONG_GAME]),
     (Game.WHEELCHAIR, [Scene.WHEELCHAIR_INPUT_USERNAME, Scene.WHEELCHAIR_GAME, Scene.WHEELCHAIR_GAME_OVER]),
     (Game.ARCADE, [Scene.LAUNCHER]),
+    (Game.SKI, [Scene.SKI_GAME]),
 ]
 
 _SCENE_TO_GAME: dict[Scene, Game] = {scene: game for game, scenes in _GAME_SCENE_MAP for scene in scenes}

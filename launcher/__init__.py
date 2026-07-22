@@ -7,6 +7,7 @@ import pygame
 
 from games.dino.viewer import DinoViewerRenderer
 from games.pong.viewer import PongViewerRenderer
+from games.ski.viewer import SkiViewerRenderer
 from shared.connection.connection_page import run_connections
 from shared.connection.protocol import GameType, SessionInfo
 from shared.connection.server import get_server
@@ -256,6 +257,9 @@ def _run_session_picker(surface: pygame.Surface, screen: pygame.Surface) -> None
         if spectator_client.spectating_game in (GameType.PONG, GameType.PONG_AI) and spectator_client.latest_pong_state:
             state.go_to(Scene.PONG_GAME)
             return
+        if spectator_client.spectating_game in (GameType.SKI, GameType.SKI_DYN) and spectator_client.latest_ski_state:
+            state.go_to(Scene.SKI_GAME)
+            return
 
         fill_surface(surface)
 
@@ -320,9 +324,83 @@ def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             state.go_to(Scene.PONG_GAME)
             return
 
+        if spectator_client.spectating_game in (GameType.SKI, GameType.SKI_DYN) and spectator_client.latest_ski_state:
+            state.go_to(Scene.SKI_GAME)
+            return
+
         game_state = spectator_client.latest_dino_state
 
         # When keeping watch, treat the finished run as 'wait for the next game' instead of leaving.
+        if (
+            spectator_client.keep_watching
+            and game_state is not None
+            and (game_state.game_over or game_state.time_left <= 0)
+        ):
+            spectator_client.await_next_game()
+            game_state = None
+
+        if game_state is None:
+            fill_surface(surface)
+            message = "Waiting for next game..." if spectator_client.keep_watching else "Waiting for game state..."
+            txt = TEXT_FONT.render(message, True, TEXT_COLOR)
+            surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
+            _draw_keep_watching_overlay(surface)
+            scale_to_screen(surface, screen)
+            continue
+
+        if game_state.game_over or game_state.time_left <= 0:
+            state.username_one = game_state.username
+            state.score_one = game_state.score
+            spectator_client.stop_watching()
+            state.go_to(Scene.LEADERBOARD)
+            return
+
+        if game_state.countdown > 0:
+            fill_surface(surface)
+            txt = HEADING_FONT.render(f"Game starting in {int(game_state.countdown) + 1}...", True, TEXT_COLOR)
+            surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
+            _draw_keep_watching_overlay(surface)
+            scale_to_screen(surface, screen)
+            continue
+
+        renderer.render_frame(surface, screen, game_state, overlay=_draw_keep_watching_overlay)
+
+
+def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
+    clock = pygame.time.Clock()
+    renderer = SkiViewerRenderer()
+
+    while state.scene == Scene.SKI_GAME:
+        clock.tick(FPS)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                state.go_to(Scene.QUIT)
+                return
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                spectator_client.stop_watching()
+                state.reset_to(Scene.SESSION_PICKER)
+                return
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_k:
+                spectator_client.toggle_keep_watching()
+
+        if not spectator_client.connected:
+            state.reset_to(Scene.LAUNCHER)
+            return
+
+        # Handle switching games while watching
+        if spectator_client.spectating_game in (GameType.PONG, GameType.PONG_AI) and spectator_client.latest_pong_state:
+            state.go_to(Scene.PONG_GAME)
+            return
+        if (
+            spectator_client.spectating_game in (GameType.DINO, GameType.DINO_JUMP)
+            and spectator_client.latest_dino_state
+        ):
+            state.go_to(Scene.DINO_GAME)
+            return
+
+        game_state = spectator_client.latest_ski_state
+
         if (
             spectator_client.keep_watching
             and game_state is not None
@@ -473,6 +551,10 @@ def _run_pong_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             state.go_to(Scene.DINO_GAME)
             return
 
+        if spectator_client.spectating_game in (GameType.SKI, GameType.SKI_DYN) and spectator_client.latest_ski_state:
+            state.go_to(Scene.SKI_GAME)
+            return
+
         pong_state = spectator_client.latest_pong_state
 
         # When keeping watch, treat the finished match as 'wait for the next game' instead of leaving.
@@ -515,6 +597,8 @@ def _run_spectator_app(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 _run_dino_game(surface, screen)
             case Scene.PONG_GAME:
                 _run_pong_game(surface, screen)
+            case Scene.SKI_GAME:
+                _run_ski_game(surface, screen)
             case Scene.LEADERBOARD:
                 _run_spectator_leaderboard(surface, screen)
             case _:

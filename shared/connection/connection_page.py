@@ -34,8 +34,10 @@ class _Entry:
 
 
 class ConnectionPage:
-    HEADERS: ClassVar[list[str]] = ["#", "NAME", "GAME", "BCI", "VIEW", "BSDJ", "BSJ", "PVP", "AI"]
-    COL_X: ClassVar[tuple[int, ...]] = tuple(Grid.x(i) for i in [1, 2.3, 5, 6.6, 7.7, 8.7, 9.7, 10.7, 11.6])
+    HEADERS: ClassVar[list[str]] = ["#", "NAME", "GAME", "BCI", "VIEW", "BSDJ", "BSJ", "PVP", "AI", "SK1", "SK2"]
+    COL_X: ClassVar[tuple[int, ...]] = tuple(
+        Grid.x(i) for i in [0.7, 2.0, 4.0, 5.0, 5.8, 6.7, 7.6, 8.5, 9.4, 10.3, 11.2]
+    )
     ROW_Y: ClassVar[tuple[int, ...]] = tuple(Grid.y(i) for i in range(2, 10))
     DOT_R: ClassVar[int] = 8
 
@@ -90,6 +92,14 @@ def run_connections(surface: pygame.Surface, screen: pygame.Surface) -> None:
                     game_srv.start_game(staged_uid, GameType.PONG)
                 pong_staging.clear()
 
+    def make_ski_cb(u: str) -> None:
+        pong_staging.discard(u)
+        game_srv.start_game(u, GameType.SKI)
+
+    def make_ski_dyn_cb(u: str) -> None:
+        pong_staging.discard(u)
+        game_srv.start_game(u, GameType.SKI_DYN)
+
     btn_back = Button(Grid.pos(6, 11), "BACK", TEXT_FONT, on_click=state.go_back)
 
     while state.scene == Scene.CONNECTION:
@@ -116,7 +126,7 @@ def run_connections(surface: pygame.Surface, screen: pygame.Surface) -> None:
 
         # Build per-row action buttons for visible entries
         visible_entries = connection_page.entries[scroll_offset : scroll_offset + visible_rows]
-        row_buttons: list[tuple[Button, Button, Button, Button]] = []
+        row_buttons: list[tuple[Button, Button, Button, Button, Button, Button]] = []
         for row, entry in enumerate(visible_entries):
             y = ConnectionPage.ROW_Y[row + 1]
             uid = entry.uid
@@ -148,7 +158,19 @@ def run_connections(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 SUBTEXT_FONT,
                 on_click=(lambda u=uid: make_pong_ai_cb(u)) if game_eligible else None,
             )
-            row_buttons.append((dino_btn, jump_btn, pong_btn, ai_btn))
+            sk1_btn = Button(
+                (ConnectionPage.COL_X[9], y),
+                "S1",
+                SUBTEXT_FONT,
+                on_click=(lambda u=uid: make_ski_cb(u)) if game_eligible else None,
+            )
+            sk2_btn = Button(
+                (ConnectionPage.COL_X[10], y),
+                "S2",
+                SUBTEXT_FONT,
+                on_click=(lambda u=uid: make_ski_dyn_cb(u)) if game_eligible else None,
+            )
+            row_buttons.append((dino_btn, jump_btn, pong_btn, ai_btn, sk1_btn, sk2_btn))
 
         for event in pygame.event.get():
             match event.type:
@@ -163,11 +185,13 @@ def run_connections(surface: pygame.Surface, screen: pygame.Surface) -> None:
                             scroll_offset = min(max_scroll, scroll_offset + 1)
                         case _:
                             btn_back.handle_click(mouse_pos)
-                            for dino_btn, jump_btn, pong_btn, ai_btn in row_buttons:
+                            for dino_btn, jump_btn, pong_btn, ai_btn, sk1_btn, sk2_btn in row_buttons:
                                 dino_btn.handle_click(mouse_pos)
                                 jump_btn.handle_click(mouse_pos)
                                 pong_btn.handle_click(mouse_pos)
                                 ai_btn.handle_click(mouse_pos)
+                                sk1_btn.handle_click(mouse_pos)
+                                sk2_btn.handle_click(mouse_pos)
                 case pygame.KEYDOWN:
                     match event.key:
                         case pygame.K_UP:
@@ -197,7 +221,7 @@ def run_connections(surface: pygame.Surface, screen: pygame.Surface) -> None:
             no_conn = TEXT_FONT.render("NO CONNECTIONS", True, DISABLED_COLOR)
             surface.blit(no_conn, no_conn.get_rect(center=Grid.pos(6, 5)))
         else:
-            for row, (entry, (dino_btn, jump_btn, pong_btn, ai_btn)) in enumerate(
+            for row, (entry, (dino_btn, jump_btn, pong_btn, ai_btn, sk1_btn, sk2_btn)) in enumerate(
                 zip(visible_entries, row_buttons, strict=True)
             ):
                 y = ConnectionPage.ROW_Y[row + 1]
@@ -230,6 +254,8 @@ def run_connections(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 jump_btn.update(surface, mouse_pos)
                 pong_btn.update(surface, mouse_pos)
                 ai_btn.update(surface, mouse_pos)
+                sk1_btn.update(surface, mouse_pos)
+                sk2_btn.update(surface, mouse_pos)
                 if entry.uid in pong_staging:
                     pygame.draw.rect(surface, ACCENT_COLOR, pong_btn.text_rect.inflate(12, 8), 2)
 

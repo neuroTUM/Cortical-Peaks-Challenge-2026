@@ -19,6 +19,9 @@ from games.pong.state import PongState, PongStateAdapter
 from games.pong.state import create_initial_state as create_pong_state
 from games.pong.update import PongInput
 from games.pong.update import update_game_state as update_pong_state
+from games.ski.state import SkiState, SkiStateAdapter
+from games.ski.state import create_initial_state as create_ski_state
+from games.ski.update import update_game_state as update_ski_state
 from shared.audit import audit
 from shared.connection.protocol import (
     AckMessage,
@@ -44,6 +47,13 @@ from shared.log import log
 
 _DINO_INPUT: dict[str, str] = {"INPUT_A": "jump", "INPUT_B": "duck"}
 _PONG_INPUT: dict[str, str] = {"INPUT_A": "up", "INPUT_B": "down"}
+_SKI_INPUT: dict[str, str] = {
+    "INPUT_A": "rotate_left",
+    "INPUT_B": "rotate_right",
+    "INPUT_C": "forward",
+    "INPUT_D": "backward",
+    "INPUT_E": "stop",
+}
 
 
 @dataclass
@@ -378,6 +388,7 @@ class GameServer(threading.Thread):
             self._active_game: GameType = GameType.DINO
             self._dino_state: DinoState | None = None
             self._pong_state: PongState | None = None
+            self._ski_state: SkiState | None = None
             self._has_started: bool = False
             self._last_heartbeat: float = time.time()
             self._game_over_at: float | None = None
@@ -449,6 +460,8 @@ class GameServer(threading.Thread):
                 self._dino_state.is_paused = self._dino_state.countdown > 0 or not self.player.is_ready
             if self._pong_state:
                 self._pong_state.is_paused = self._pong_state.countdown > 0 or not self.player.is_ready
+            if self._ski_state:
+                self._ski_state.is_paused = self._ski_state.countdown > 0 or not self.player.is_ready
 
             game_input: str | None = None
             try:
@@ -458,6 +471,8 @@ class GameServer(threading.Thread):
                         game_input = _DINO_INPUT.get(cmd)
                     elif self._active_game in (GameType.PONG, GameType.PONG_AI):
                         game_input = _PONG_INPUT.get(cmd)
+                    elif self._active_game in (GameType.SKI, GameType.SKI_DYN):
+                        game_input = _SKI_INPUT.get(cmd)
             except queue.Empty:
                 pass
 
@@ -478,6 +493,11 @@ class GameServer(threading.Thread):
                     self._pong_state = create_pong_state(self.player.display_name)
                     self._pong_state.countdown = self._COUNTDOWN.total_seconds()
                     self._pong_state.is_paused = True
+                case GameType.SKI | GameType.SKI_DYN:
+                    is_dynamic = game_type == GameType.SKI_DYN
+                    self._ski_state = create_ski_state(self.player.display_name, dynamic=is_dynamic)
+                    self._ski_state.countdown = self._COUNTDOWN.total_seconds()
+                    self._ski_state.is_paused = True
             self.server.push_sessions()
             audit.record("game_start", token=self.player.bci_token, game=game_type.value)
             log.info("[%s] Game started: %s", self.player.bci_token, game_type)
@@ -538,6 +558,24 @@ class GameServer(threading.Thread):
                                 log.info(
                                     "[%s] Pong game over (winner=%d)", self.player.bci_token, self._pong_state.winner
                                 )
+                case GameType.SKI | GameType.SKI_DYN:
+                    if self._ski_state:
+                        if self._ski_state.countdown > 0:
+                            self._ski_state.countdown = max(0.0, self._ski_state.countdown - 1.0 / FPS)
+                            return
+                        if not self._ski_state.is_paused:
+                            ski_input = (
+                                game_input
+                                if game_input in ("rotate_left", "rotate_right", "forward", "backward", "stop")
+                                else None
+                            )
+                            self._ski_state = update_ski_state(self._ski_state, ski_input)
+
+                            if self._ski_state.game_over:
+                                self._game_over_at = time.time()
+                                self.player.game = None
+                                self.server.push_sessions()
+                                log.info("[%s] Ski game over", self.player.bci_token)
 
         def _broadcast_state(self) -> None:
             viewers = self.server.viewers_for(self.player.bci_token)
@@ -551,6 +589,9 @@ class GameServer(threading.Thread):
                     game_type = self._active_game
                 case GameType.PONG | GameType.PONG_AI if self._pong_state:
                     state_bytes = PongStateAdapter.dump_bytes(self._pong_state)
+                    game_type = self._active_game
+                case GameType.SKI | GameType.SKI_DYN if self._ski_state:
+                    state_bytes = SkiStateAdapter.dump_bytes(self._ski_state)
                     game_type = self._active_game
             if state_bytes and game_type:
                 msg = to_bytes(StateMessage(content=state_bytes, game=game_type))
