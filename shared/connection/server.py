@@ -46,7 +46,7 @@ from shared.leaderboard import Leaderboard
 from shared.log import log
 
 _DINO_INPUT: dict[str, str] = {"INPUT_A": "jump", "INPUT_B": "duck"}
-_PONG_INPUT: dict[str, str] = {"INPUT_A": "up", "INPUT_B": "down"}
+_PONG_INPUT: dict[str, str] = {"INPUT_C": "up", "INPUT_D": "down"}
 _SKI_INPUT: dict[str, str] = {
     "INPUT_A": "rotate_left",
     "INPUT_B": "rotate_right",

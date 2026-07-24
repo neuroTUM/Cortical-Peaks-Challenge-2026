@@ -125,6 +125,10 @@ def main() -> None:
                     cmd = "INPUT_A"
                 elif event.key == pygame.K_DOWN:
                     cmd = "INPUT_B"
+                elif event.key == pygame.K_LEFT:
+                    cmd = "INPUT_C"
+                elif event.key == pygame.K_RIGHT:
+                    cmd = "INPUT_D"
                 if cmd:
                     bci.send_command(cmd)
                     prev_cmd = cmd

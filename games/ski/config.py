@@ -4,10 +4,10 @@ from dataclasses import dataclass
 @dataclass
 class SkiConfig:
     time_limit: int = 300
-    move_speed: float = 6.0
-    rotation_speed: float = 4.0
+    move_speed: float = 20.0
+    rotation_speed: float = 10.0
 
-    debug_colliders: bool = True  # enable/disable colliders
+    debug_colliders: bool = False  # enable/disable colliders
 
     player_radius: int = 80
     obstacle_radius: int = 120
