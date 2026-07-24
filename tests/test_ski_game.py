@@ -5,13 +5,14 @@ import pygame
 from games.ski.state import create_initial_state
 from games.ski.update import update_game_state
 from games.ski.viewer import SkiViewerRenderer
+from shared.log import log
 from shared.ui import init_pygame
 
 
 def run_local_test() -> None:
-    print("Which game mode do you want to test?")  # noqa: T201
-    print("1. Static Obstacles (SK1)")
-    print("2. Dynamic Obstacles (SK2)")
+    log.info("Which game mode do you want to test?")
+    log.info("1. Static Obstacles (SK1)")
+    log.info("2. Dynamic Obstacles (SK2)")
     choice = input("Enter 1 or 2 (default 1): ").strip()
     is_dynamic = choice == "2"
 
@@ -26,11 +27,11 @@ def run_local_test() -> None:
     state.is_paused = False
     state.countdown = 0.0
 
-    print("--- Local Test Harness Started ---")
-    print(f"Mode: {mode_name}")
-    print("Press UP/DOWN to move forward/backward")
-    print("Press LEFT/RIGHT to rotate")
-    print("Press ESCAPE to quit")
+    log.info("--- Local Test Harness Started ---")
+    log.info(f"Mode: {mode_name}")
+    log.info("Press UP/DOWN to move forward/backward")
+    log.info("Press LEFT/RIGHT to rotate")
+    log.info("Press ESCAPE to quit")
 
     while not state.game_over:
         clock.tick(30)
@@ -61,7 +62,7 @@ def run_local_test() -> None:
 
         pygame.display.flip()
 
-    print("Game Over!")
+    log.info("Game Over!")
     pygame.quit()
 
 
