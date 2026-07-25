@@ -23,4 +23,3 @@ class ObstacleAsset(Asset):
 
     SPRITE = "StaticObsticle.png"
     MOVING_SPRITE = "MovingObject.png"
-    BARRIER = "Barrier.png"

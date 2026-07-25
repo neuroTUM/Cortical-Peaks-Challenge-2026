@@ -43,12 +43,6 @@ class SkiViewerRenderer:
         raw_moving_obs = AssetManager.get(ObstacleAsset.MOVING_SPRITE)
         self.moving_obs_img = scale_to_fit(raw_moving_obs, obs_size, obs_size)
 
-        barrier_size = ski_config.barrier_radius * 2
-        raw_barrier = AssetManager.get(ObstacleAsset.BARRIER)
-        self.barrier_img = scale_to_fit(raw_barrier, barrier_size, barrier_size)
-
-        self.barrier_img_h = pygame.transform.rotate(self.barrier_img, 90)
-
         self.arrow_img = pygame.Surface((30, 30), pygame.SRCALPHA)
         pygame.draw.polygon(self.arrow_img, ACCENT_COLOR, [(0, 30), (15, 0), (30, 30), (15, 20)])
 
@@ -104,42 +98,29 @@ class SkiViewerRenderer:
         player_draw_x = state.x - cam_x
         player_draw_y = state.y - cam_y
 
-        surface_w = surface.get_width()
-        surface_h = surface.get_height()
-
+        screen_w = Grid.x(12)
         margin = ski_config.track_margin_px
-        b_rad = ski_config.barrier_radius
-        b_size = b_rad * 2
+        b_vis_rad = ski_config.barrier_radius
+        b_pad = ski_config.barrier_transparent_padding
 
-        spacing = b_size - ski_config.barrier_overlap
+        left_wall_world = margin + b_vis_rad + (b_vis_rad - b_pad)
+        right_wall_world = screen_w - margin - b_vis_rad - (b_vis_rad - b_pad)
+        top_wall_world = state.goal_y - ski_config.track_top_margin + (b_vis_rad - b_pad)
+        bottom_wall_world = state.start_y + ski_config.track_bottom_margin - (b_vis_rad - b_pad)
 
-        left_b_x = margin + b_rad
-        right_b_x = surface_w - margin - b_rad
-        top_b_y = state.goal_y - ski_config.track_top_margin
-        bottom_b_y = state.start_y + ski_config.track_bottom_margin
+        draw_left = int(left_wall_world - cam_x)
+        draw_right = int(right_wall_world - cam_x)
+        draw_top = int(top_wall_world - cam_y)
+        draw_bottom = int(bottom_wall_world - cam_y)
 
-        start_tile_y = int(cam_y // spacing) * spacing
-        for y_off in range(-spacing, surface_h + spacing, spacing):
-            world_y = start_tile_y + y_off
+        cyan_color = (0, 255, 255)
+        line_thickness = 6
 
-            if world_y < top_b_y or world_y > bottom_b_y:
-                continue
+        rect_width = draw_right - draw_left
+        rect_height = draw_bottom - draw_top
+        boundary_rect = pygame.Rect(draw_left, draw_top, rect_width, rect_height)
 
-            draw_y = world_y - cam_y
-            surface.blit(self.barrier_img, self.barrier_img.get_rect(center=(left_b_x, draw_y)))
-            surface.blit(self.barrier_img, self.barrier_img.get_rect(center=(right_b_x, draw_y)))
-
-        if cam_y - b_size <= top_b_y <= cam_y + surface_h + b_size:
-            draw_top_y = top_b_y - cam_y
-            for x in range(int(left_b_x), int(right_b_x) + spacing, spacing):
-                draw_x = min(x, right_b_x)
-                surface.blit(self.barrier_img_h, self.barrier_img_h.get_rect(center=(draw_x, draw_top_y)))
-
-        if cam_y - b_size <= bottom_b_y <= cam_y + surface_h + b_size:
-            draw_bot_y = bottom_b_y - cam_y
-            for x in range(int(left_b_x), int(right_b_x) + spacing, spacing):
-                draw_x = min(x, right_b_x)
-                surface.blit(self.barrier_img_h, self.barrier_img_h.get_rect(center=(draw_x, draw_bot_y)))
+        pygame.draw.rect(surface, cyan_color, boundary_rect, width=line_thickness)
 
         pygame.draw.circle(
             surface,
