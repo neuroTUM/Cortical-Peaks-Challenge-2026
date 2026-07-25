@@ -50,7 +50,7 @@ class SkiViewerRenderer:
         progress = _roadmap_progress(state)
 
         track_width = 8
-        track_x = Grid.x(0.4)
+        track_x = Grid.x(0.18)
         track_top = Grid.y(2.5)
         track_bottom = Grid.y(8.5)
         track_height = track_bottom - track_top
