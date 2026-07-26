@@ -217,14 +217,16 @@ The heartbeat is bidirectional and both directions operate independently with a 
 
 The `content` field of a `CMD` message MUST be one of the strings listed below, zero-padded to 8 bytes. The server MUST silently drop any `CMD` with an unrecognised `content` value.
 
-| Game                | `INPUT_A` | `INPUT_B`  |
-| ------------------- | --------- | ---------- |
-| Dino (Jump & Duck)  | jump      | duck       |
-| Dino (Jump Only)    | jump      | (unused)   |
-| Pong vs AI          | move up   | move down  |
-| Pong PvP            | move up   | move down  |
+| Game                | `INPUT_A` | `INPUT_B`  | `INPUT_C` | `INPUT_D`
+| ------------------- | --------- | ---------- | --------- | --------- |
+| Brainski1 (Jump & Duck)  | jump      | duck       | (unused)  | (unused)  |
+| Brainski1 (Jump Only)    | jump      | (unused)   | (unused)  | (unused)  |
+| Pong vs AI               | (unused)  | (unused)   | move up   | move down |
+| Pong PvP                 | (unused)  | (unused)   | move up   | move down |
+| Brainski2 (Static Obs)          | rotate left  | rotate right   | move forward   | move backward |
+| Brainski2 (Moving Obs)          | rotate left  | rotate right   | move forward   | move backward |
 
-The `content` field MUST be either `"INPUT_A"` or `"INPUT_B"`, zero-padded to 8 bytes. The server maps these to game-specific actions as shown above.
+The `content` field MUST be either `"INPUT_A"`, `"INPUT_B"`, `"INPUT_C"` or `"INPUT_D"`, zero-padded to 8 bytes. The server maps these to game-specific actions as shown above.
 
 ---
 
@@ -234,7 +236,7 @@ Games are started by the server operator, not by the BCI client.
 
 When the operator selects a game for a given player, the server initialises a fresh game state with a countdown during which the game is paused. CMD messages arriving while the countdown is non-zero MUST be discarded. When the countdown reaches zero the game enters its active phase and CMD messages are processed as game input.
 
-A Dino game ends when the player loses all lives (one life is lost per obstacle collision) or the time limit expires. A Pong game ends when one side reaches the score limit. On game over the server holds the final state for a linger period, then resets. The server MUST NOT accept further commands during the linger period.
+A Brainski1 game ends when the player loses all lives (one life is lost per obstacle collision) or the time limit expires. A Pong game ends when one side reaches the score limit. A Brainski2 game ends when the player reaches the goal or the time limit expires. On *game over* the server holds the final state for a linger period, then resets. The server MUST NOT accept further commands during the linger period.
 
 If the BCI disconnects while a game is running, the game MUST pause immediately and MUST resume when the BCI reconnects.
 
@@ -248,7 +250,7 @@ If thirty seconds elapse without any message carrying the session token, the ser
 
 ---
 
-## 11. Example: Dino Game Playthrough
+## 11. Example: Brainski1 Game Playthrough
 
 `C` is the BCI client; `S` is the game server. Messages are shown as field descriptors rather than raw hex for readability; the actual wire encoding follows the layouts in Section 5.
 
@@ -269,7 +271,7 @@ S to C  PONG                                                    (1 byte)
 S to C  PING                                                    (1 byte)
 C to S  PONG  device=BCI  session_token=abcdef0123456789       (10 bytes)
 
--- Operator selects Dino for "alice". Server initialises game with countdown, game paused. --
+-- Operator selects Brain for "alice". Server initialises game with countdown, game paused. --
 
 C to S  CMD  session_token=abcdef0123456789  content="jump"    (18 bytes)
 
@@ -279,15 +281,15 @@ C to S  CMD  session_token=abcdef0123456789  content="jump"    (18 bytes)
 
 C to S  CMD  session_token=abcdef0123456789  content="jump"    (18 bytes)
 
-        Accepted. Dino jumps over a cactus.
+        Accepted. Brain jumps over a cactus.
 
 C to S  CMD  session_token=abcdef0123456789  content="duck"    (18 bytes)
 
-        Accepted. Dino ducks under a low obstacle.
+        Accepted. Brain ducks under a low obstacle.
 
 -- Many CMD messages follow. Heartbeats continue throughout. --
 
-        Dino collides with an obstacle and loses its last life.
+        Brain collides with an obstacle and loses its last life.
         Server sets game_over and enters the linger period.
         No further commands are accepted.
 

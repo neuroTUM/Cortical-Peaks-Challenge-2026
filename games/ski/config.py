@@ -25,7 +25,7 @@ class SkiConfig:
     dynamic_obstacle_hitbox_height: int = 90
     dynamic_obstacle_hitbox_offset_y: float = 20.0
     goal_radius: int = 40
-    goal_distance_grid: float = 40.0
+    goal_distance_grid: float = 20.0
 
     track_margin_px: float = 5.0
     track_top_margin: float = 200.0
