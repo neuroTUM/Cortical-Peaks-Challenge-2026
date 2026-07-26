@@ -7,6 +7,13 @@ class SkiConfig:
     move_speed: float = 20.0
     rotation_speed: float = 10.0
 
+    # scoring
+    max_score_static: float = 200.0
+    max_score_dynamic: float = 250.0
+    time_bonus_max_static: float = 50.0
+    time_bonus_max_dynamic: float = 100.0
+    time_bonus_grace_period: float = 0.0
+
     debug_colliders: bool = False  # enable/disable colliders
 
     player_radius: int = 80

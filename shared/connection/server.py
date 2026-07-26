@@ -575,7 +575,11 @@ class GameServer(threading.Thread):
                                 self._game_over_at = time.time()
                                 self.player.game = None
                                 self.server.push_sessions()
-                                log.info("[%s] Ski game over", self.player.bci_token)
+                                Leaderboard.record_ski(self.player.display_name, self._ski_state.score)
+                                audit.record(
+                                    "game_over", token=self.player.bci_token, game="ski", score=self._ski_state.score
+                                )
+                                log.info("[%s] Ski game over (score=%d)", self.player.bci_token, self._ski_state.score)
 
         def _broadcast_state(self) -> None:
             viewers = self.server.viewers_for(self.player.bci_token)

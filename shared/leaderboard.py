@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class Leaderboard:
     _path: ClassVar[Path] = DATA_DIR / "leaderboard.json"
     _lock: ClassVar[threading.Lock] = threading.Lock()
-    HEADERS: ClassVar[list[str]] = ["#", "NAME", "DINO", "PONG", "CHAIR", "TOTAL"]
+    HEADERS: ClassVar[list[str]] = ["#", "NAME", "DINO", "PONG", "SKI", "TOTAL"]
     COL_X: ClassVar[tuple[int, ...]] = tuple(Grid.x(i) for i in [0.75, 2.5, 5, 7, 9, 11])
     ROW_Y: ClassVar[tuple[int, ...]] = tuple(Grid.y(i) for i in range(2, 10))
 
@@ -41,11 +41,11 @@ class Leaderboard:
             cls._commit(entries, entry)
 
     @classmethod
-    def record_wheelchair(cls, name: str, score: int) -> None:
+    def record_ski(cls, name: str, score: float) -> None:
         with cls._lock:
             entries = cls._load()
             entry = cls._get_or_create(entries, name)
-            entry["wheelchair"] += score
+            entry["ski"] += int(score)
             cls._commit(entries, entry)
 
     @classmethod
@@ -81,13 +81,13 @@ class Leaderboard:
         for entry in entries:
             if entry["name"] == name:
                 return entry
-        entry: dict[str, Any] = {"name": name, "dino": 0, "pong": 0, "wheelchair": 0, "total": 0}
+        entry: dict[str, Any] = {"name": name, "dino": 0, "pong": 0, "ski": 0, "total": 0}
         entries.append(entry)
         return entry
 
     @classmethod
     def _commit(cls, entries: list[dict[str, Any]], entry: dict[str, Any]) -> None:
-        entry["total"] = entry["dino"] + entry["pong"] + entry["wheelchair"]
+        entry["total"] = entry["dino"] + entry["pong"] + entry["ski"]
         entries.sort(key=lambda e: -e["total"])
         cls._save(entries)
 
@@ -141,7 +141,7 @@ def run_leaderboard(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 entry["name"],
                 str(entry["dino"]),
                 str(entry["pong"]),
-                str(entry["wheelchair"]),
+                str(entry["ski"]),
                 str(entry["total"]),
             ]
             for col, val in enumerate(values):

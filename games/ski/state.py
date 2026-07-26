@@ -54,6 +54,22 @@ class SkiState:
     obstacles: list[ObstacleState]
     game_over: bool = False
 
+    @property
+    def current_time_bonus(self) -> float:
+        time_spent = ski_config.time_limit - self.time_left
+
+        is_dynamic = any(obs.speed > 0 for obs in self.obstacles)
+        max_bonus = ski_config.time_bonus_max_dynamic if is_dynamic else ski_config.time_bonus_max_static
+
+        if time_spent <= ski_config.time_bonus_grace_period:
+            return float(max_bonus)
+
+        time_over_grace = time_spent - ski_config.time_bonus_grace_period
+        time_allowed_to_decay = ski_config.time_limit - ski_config.time_bonus_grace_period
+
+        decay_ratio = 1.0 - (time_over_grace / max(1.0, time_allowed_to_decay))
+        return max(0.0, max_bonus * decay_ratio)
+
 
 class _SkiStateAdapter:
     @staticmethod

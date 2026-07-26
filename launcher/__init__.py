@@ -450,7 +450,7 @@ def _run_spectator_leaderboard(surface: pygame.Surface, screen: pygame.Surface) 
 
     col_x = tuple(Grid.x(i) for i in [0.75, 2.5, 5, 7, 9, 11])
     row_y = tuple(Grid.y(i) for i in range(3, 11))
-    headers = ["#", "NAME", "DINO", "PONG", "CHAIR", "TOTAL"]
+    headers = ["#", "NAME", "DINO", "PONG", "SKI", "TOTAL"]
     visible_rows = 6
     scroll_offset = 0
     max_scroll = max(0, len(entries) - visible_rows)
@@ -501,7 +501,7 @@ def _run_spectator_leaderboard(surface: pygame.Surface, screen: pygame.Surface) 
                     entry["name"],
                     str(entry["dino"]),
                     str(entry["pong"]),
-                    str(entry["wheelchair"]),
+                    str(entry["ski"]),
                     str(entry["total"]),
                 ]
             ):

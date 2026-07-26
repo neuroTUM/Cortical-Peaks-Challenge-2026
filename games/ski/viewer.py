@@ -246,6 +246,9 @@ class SkiViewerRenderer:
         time_txt = SUBTEXT_FONT.render(f"Time: {state.time_left:.1f}s", True, TEXT_COLOR)
         surface.blit(time_txt, time_txt.get_rect(topright=(Grid.x(11.5), Grid.y(1.2))))
 
+        bonus_txt = SUBTEXT_FONT.render(f"Time Bonus: +{state.current_time_bonus:.0f}", True, TEXT_COLOR)
+        surface.blit(bonus_txt, bonus_txt.get_rect(topright=(Grid.x(11.5), Grid.y(2.0))))
+
         if state.game_over:
             go_txt = SUBTEXT_FONT.render("GAME OVER", True, (255, 0, 0))
             surface.blit(go_txt, go_txt.get_rect(center=(Grid.x(6), Grid.y(4))))

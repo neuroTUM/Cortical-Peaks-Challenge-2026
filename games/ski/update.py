@@ -18,13 +18,20 @@ def _distance_from_start(state: SkiState) -> float:
 
 def _update_score(state: SkiState) -> None:
     distance = _distance_from_start(state)
-    max_track_distance = state.start_y - state.goal_y
-    capped_distance = min(distance, max_track_distance)
+    max_track_distance = max(1.0, state.start_y - state.goal_y)
+
+    progress = max(0.0, min(1.0, distance / max_track_distance))
+
+    is_dynamic = any(obs.speed > 0 for obs in state.obstacles)
+    if is_dynamic:
+        base_score = progress * ski_config.max_score_dynamic
+    else:
+        base_score = progress * ski_config.max_score_static
 
     if state.reached_goal:
-        state.score = (capped_distance + state.time_left) / 10.0
-        return
-    state.score = capped_distance / 10.0
+        state.score = base_score + state.current_time_bonus
+    else:
+        state.score = base_score
 
 
 def _check_goal(state: SkiState) -> bool:
