@@ -124,7 +124,7 @@ class _GameStateAdapter:
             state.spawn_timer,
             int(state.is_paused),
             state.lives,
-            state.jumponly
+            state.jumponly,
         )
         return header + dino_bytes + obs_bytes
 
@@ -144,7 +144,7 @@ class _GameStateAdapter:
             spawn_timer,
             is_paused_b,
             lives,
-            jumponly
+            jumponly,
         ) = struct.unpack_from(_FMT_GAME_HEADER, data, 0)
 
         dino_off = _GAME_HEADER_SIZE
@@ -207,7 +207,7 @@ class _GameStateAdapter:
             spawn_timer=spawn_timer,
             is_paused=bool(is_paused_b),
             lives=lives,
-            jumponly=jumponly
+            jumponly=jumponly,
         )
 
 
