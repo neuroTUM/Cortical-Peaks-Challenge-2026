@@ -413,6 +413,7 @@ def _assert_touch_tracks_window(obs: ObstacleState, state: GameState) -> None:
         f"Should be OUTSIDE when obstacle is too far (x={too_far_x}, safe_max={safe_max})"
     )
 
+
 def test_zone_marker_touch_safe_for_cactus() -> None:
     """Verify that the dino's center point inside the safe carpet window allows a safe jump for a cactus."""
     _assert_touch_tracks_window(_make_cactus(0), _active_state())
