@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from games.dino.state import GameState, GameStateAdapter
 from games.pong.state import PongState, PongStateAdapter
+from games.ski.state import SkiState, SkiStateAdapter
 from shared.connection.protocol import (
     AckMessage,
     Address,
@@ -52,6 +53,7 @@ class SpectatorClient:
 
         self.latest_dino_state: GameState | None = None
         self.latest_pong_state: PongState | None = None
+        self.latest_ski_state: SkiState | None = None
         self.intent_to_connect: bool = False
         self.connected: bool = False
         self.viewer_token: str = ""
@@ -199,6 +201,8 @@ class SpectatorClient:
                         self.latest_dino_state = GameStateAdapter.validate_bytes(content)
                     case GameType.PONG | GameType.PONG_AI:
                         self.latest_pong_state = PongStateAdapter.validate_bytes(content)
+                    case GameType.SKI | GameType.SKI_DYN:
+                        self.latest_ski_state = SkiStateAdapter.validate_bytes(content)
 
 
 spectator_client = SpectatorClient()

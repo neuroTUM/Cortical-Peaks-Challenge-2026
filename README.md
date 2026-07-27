@@ -6,7 +6,7 @@ A collection of arcade games built with Python and Pygame, designed and implemen
 | --------------- | -------------------------------------------- |
 | **Brain Ski 1** | Chrome-style dinosaur runner (1P)            |
 | **Pong**        | Classic two-paddle ball game (1P vs AI / 2P) |
-| **Brain Ski 2** | Obstacle avoidance game (player count TBD)   |
+| **Brain Ski 2** | Obstacle avoidance game (1P)   |
 
 ## Getting Started
 
@@ -42,7 +42,7 @@ Cortical Peaks Challenge 2026 consists of three separate applications:
 
 - **Game Server**: The authoritative source of truth for game logic and state. Manages sessions and starts games.
 - **Spectator**: Display-only client for viewing running games.
-- **BCI Client**: Implemented by each competing team; sends inputs to the server during a game.
+- **BCI Client (Controller)**: Implemented by each competing team; sends inputs to the server during a game.
 
 The Game Server and Spectator are provided by Cortical Peaks Challenge 2026, while the BCI Client is expected to be implemented by the competing teams. A reference implementation in Python is available at `examples/bci_client.py`.
 
@@ -68,7 +68,7 @@ With all three running, start a game:
 
 1. **Connect the BCI controller.** The example client (`uv run just example-bci`) registers with the server automatically; a team's own client connects the same way.
 2. **Connect the spectator.** In the spectator window, click **CONNECT TO SERVER**, enter the server IP and port (defaults `127.0.0.1` and `5000`), then click **CONNECT**.
-3. **Pick a game on the server.** In the server window, open the **CONNECTIONS** tab and choose a game for a connected player: **BSJ** (BrainSki, jump only), **BSDJ** (BrainSki, jump & duck), **PONG PVP**, or **PONG AI**.
+3. **Pick a game on the server.** In the server window, open the **CONNECTIONS** tab and choose a game for a connected player: **BSJ** (BrainSki, jump only), **BSDJ** (BrainSki, jump & duck), **PONG PVP**, **PONG AI**, **SK1** (Brainski2, static obstacles), **SK2** (Brainski2, moving obstacles).
 4. **Watch it play.** In the spectator window, click the player in the **PLAYER** column. The game begins after a 10-second countdown and then responds to the BCI inputs.
 
 #### Developer flags

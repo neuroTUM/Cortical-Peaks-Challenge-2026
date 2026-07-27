@@ -41,11 +41,11 @@ def test_record_pong_win_creates_entry() -> None:
     assert entries[0]["pong"] == 1
 
 
-def test_record_wheelchair_creates_entry() -> None:
-    Leaderboard.record_wheelchair("charlie", 1)
+def test_record_ski_creates_entry() -> None:
+    Leaderboard.record_ski("charlie", 1)
     entries = Leaderboard.snapshot()
     assert entries[0]["name"] == "charlie"
-    assert entries[0]["wheelchair"] == 1
+    assert entries[0]["ski"] == 1
 
 
 def test_clear_empties_leaderboard() -> None:
