@@ -23,15 +23,10 @@ def _update_score(state: SkiState) -> None:
     progress = max(0.0, min(1.0, distance / max_track_distance))
 
     is_dynamic = any(obs.speed > 0 for obs in state.obstacles)
-    if is_dynamic:
-        base_score = progress * ski_config.max_score_dynamic
-    else:
-        base_score = progress * ski_config.max_score_static
 
-    if state.reached_goal:
-        state.score = base_score + state.current_time_bonus
-    else:
-        state.score = base_score
+    base_score = progress * ski_config.max_score_dynamic if is_dynamic else progress * ski_config.max_score_static
+
+    state.score = base_score + state.current_time_bonus if state.reached_goal else base_score
 
 
 def _check_goal(state: SkiState) -> bool:
