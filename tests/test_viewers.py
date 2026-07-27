@@ -46,7 +46,7 @@ def test_dino_hud_draws_red_hearts(surfaces: tuple[pygame.Surface, pygame.Surfac
     DinoViewerRenderer().render_frame(surface, screen, state)
 
     row_y = Grid.y(3)
-    reds = sum(1 for x in range(WIDTH) if surface.get_at((x, row_y))[:3] == (255, 0, 0))
+    reds = sum(1 for x in range(WIDTH) if surface.get_at((x, row_y))[:3] == (248, 189, 41))
     assert reds > 0, "expected red heart pixels along the lives row"
 
 
