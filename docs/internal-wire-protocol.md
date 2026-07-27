@@ -98,7 +98,7 @@ Both Dino variants (Jump & Duck = `0x01`, Jump Only = `0x04`) use the identical 
 
 `N` is given by `obstacle_count` in the header.
 
-#### GameState header — `"!16sfBHHHBfiifBB"` (45 bytes)
+#### GameState header — `"!16sfBHHHBfiifBBB"` (46 bytes)
 
 | Offset | Type  | Field           | Notes                         |
 | ------ | ----- | --------------- | ----------------------------- |
@@ -115,6 +115,7 @@ Both Dino variants (Jump & Duck = `0x01`, Jump Only = `0x04`) use the identical 
 | 40     | `f`   | spawn_timer     | frames since last spawn       |
 | 44     | `B`   | is_paused       | `0x00` or `0x01`             |
 | 45     | `B`   | lives           | remaining lives               |
+| 46     | `B`   | jumponly           | brainski mode               |
 
 #### DinoState — `"!hhhhHHBBHHfH"` (24 bytes)
 
