@@ -42,18 +42,17 @@ def update_game_state(
 
     direction = -1 if player_input == "up" else (1 if player_input == "down" else 0)
     state.left_paddle.move_counter += 1
-    if state.left_paddle.move_counter >= cfg.paddle_move_interval:
-        _move_paddle(state.left_paddle, direction, cfg.paddle_step)
-        state.left_paddle.move_counter = 0
+
+    _move_paddle(state.left_paddle, direction, cfg.paddle_step)
+    state.left_paddle.move_counter = 0
 
     state.right_paddle.move_counter += 1
-    if state.right_paddle.move_counter >= cfg.paddle_move_interval:
-        if player2_input is not None:
-            direction2 = -1 if player2_input == "up" else 1
-            _move_paddle(state.right_paddle, direction2, cfg.paddle_step)
-        elif not pvp:
-            _ai_move(state.right_paddle, state.puck, cfg.paddle_step)
-        state.right_paddle.move_counter = 0
+    if player2_input is not None:
+        direction2 = -1 if player2_input == "up" else 1
+        _move_paddle(state.right_paddle, direction2, cfg.paddle_step)
+    elif not pvp:
+        _ai_move(state.right_paddle, state.puck, cfg.paddle_step)
+    state.right_paddle.move_counter = 0
 
     state.puck.move_counter += 1
     if state.puck.move_counter >= cfg.puck_move_interval:

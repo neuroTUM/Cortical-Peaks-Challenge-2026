@@ -44,12 +44,10 @@ def _jump_safe_frames(jv: int, g: float, obs_height: int) -> tuple[int, int] | N
 def safe_press_window(obs: ObstacleState, speed: int, dino_left: int, dino_right: int) -> tuple[float, float]:
     """Range of obs.hitbox_x at press time where pressing jump/duck clears the obstacle.
 
-    Returns (safe_min, safe_max). safe_min is the latest safe press (obstacle closest);
-    safe_max is the earliest safe press (obstacle furthest). Returns (0, 0) when no
-    safe window exists (e.g. cactus too tall to clear given jump physics).
+    Returns (safe_min, safe_max). safe_min is the smallest obs.hitbox_x (closest);
+    safe_max is the largest obs.hitbox_x (furthest).
     """
     if obs.type == "bird":
-        # Duck timer must outlast the bird-dino horizontal overlap.
         safe_min = float(dino_right)
         safe_max = float(dino_left - obs.width + dino_config.duck_duration * speed)
         return safe_min, safe_max
@@ -58,29 +56,56 @@ def safe_press_window(obs: ObstacleState, speed: int, dino_left: int, dino_right
     if frames is None:
         return 0.0, 0.0
     first_safe, last_safe = frames
-    # Overlap at game-frame N requires obs.hitbox_x < dino_right and > dino_left - obs.width.
-    # safe_min/safe_max are the X0 bounds that shift the integer overlap range into
-    # [first_safe, last_safe] exactly.
-    safe_min = float(dino_right + (first_safe - 1) * speed)
-    safe_max = float(dino_left + (last_safe + 1) * speed - obs.width)
+
+    # --- FIXED CACTUS BOUNDS ---
+    # Earliest safe jump (cactus furthest away -> largest X bound)
+    bound_a = float(dino_left + (last_safe + 1) * speed - obs.width)
+    # Latest safe jump (cactus closest -> smallest X bound)
+    bound_b = float(dino_right + (first_safe - 1) * speed)
+
+    safe_min = min(bound_a, bound_b)
+    safe_max = max(bound_a, bound_b)
+
     return safe_min, safe_max
 
 
 def zone_marker_bounds(obs: ObstacleState, speed: int, dino_left: int, dino_right: int) -> tuple[int, int] | None:
-    """Screen-space (x, width) of the safe-press carpet, using touch (edge-overlap) semantics.
+    """Screen-space (x, width) of the safe-press carpet, snapped to the discrete UI grid.
 
-    Sized and placed so the dino's full hitbox overlaps it exactly across the safe press window:
-    pressing whenever any part of the dino touches the strip clears the obstacle. The width is the
-    safe window minus the dino width, so it requires the window to exceed the dino width; returns
-    None when no such carpet exists (window too narrow, or the obstacle is unclearable). Its length
-    varies with the obstacle - a short duck window yields a short strip, a tall jump window a long one.
+    Calculates the mathematically ideal safe window using exact physics simulation,
+    then maps the width and offset to the nearest discrete cells defined by the
+    Grid class to prevent jitter.
     """
     safe_min, safe_max = safe_press_window(obs, speed, dino_left, dino_right)
-    width = int(safe_max - safe_min) - (dino_right - dino_left)
-    if width <= 0:
+
+    # 1. Calculate the mathematically ideal raw width
+    raw_width = int(safe_max - safe_min)
+    if raw_width <= 0:
         return None
-    zone_x = obs.hitbox_x - int(safe_max - dino_right)
-    return zone_x, width
+
+    # 2. Calculate the exact offset anchored to the dino's center
+    dino_center = (dino_left + dino_right) // 2
+    exact_offset = int(safe_max - dino_center)
+
+    # --- Discrete Grid Snapping Logic ---
+    # Fetch the pixel width of exactly one grid cell (1/12th of the screen)
+    cell_width = Grid.x(1)
+
+    if cell_width <= 0:
+        return obs.hitbox_x - exact_offset, raw_width  # Fallback
+
+    # 3. Snap the width to the nearest whole grid cell (minimum 1 cell)
+    grid_span = max(1, round(raw_width / cell_width))
+    snapped_width = grid_span * cell_width
+
+    # 4. Snap the offset distance to the nearest whole grid cell
+    offset_span = round(exact_offset / cell_width)
+    snapped_offset = offset_span * cell_width
+
+    # 5. Apply the locked, snapped offset to the smoothly moving obstacle
+    snapped_zone_x = obs.hitbox_x - snapped_offset
+
+    return snapped_zone_x, snapped_width
 
 
 def _apply_input(state: GameState, player_input: Literal["jump", "duck"] | None) -> None:
