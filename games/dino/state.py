@@ -17,7 +17,7 @@ _FMT_DINO_STATE = "!hhhhHHBBHHfH"  # 24 bytes
 _FMT_OBSTACLE = "!hhHHBH"  # 11 bytes
 # GameState fixed header: username time_left obstacle_count current_speed game_timer score
 #   game_over countdown clouds_offset track_offset spawn_timer is_paused lives
-_FMT_GAME_HEADER = "!16sfBHHHBfhhfBB"
+_FMT_GAME_HEADER = "!16sfBHHHBfiifBB"
 
 _DINO_STATE_SIZE = struct.calcsize(_FMT_DINO_STATE)
 _OBSTACLE_SIZE = struct.calcsize(_FMT_OBSTACLE)
