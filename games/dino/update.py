@@ -44,12 +44,10 @@ def _jump_safe_frames(jv: int, g: float, obs_height: int) -> tuple[int, int] | N
 def safe_press_window(obs: ObstacleState, speed: int, dino_left: int, dino_right: int) -> tuple[float, float]:
     """Range of obs.hitbox_x at press time where pressing jump/duck clears the obstacle.
 
-    Returns (safe_min, safe_max). safe_min is the latest safe press (obstacle closest);
-    safe_max is the earliest safe press (obstacle furthest). Returns (0, 0) when no
-    safe window exists (e.g. cactus too tall to clear given jump physics).
+    Returns (safe_min, safe_max). safe_min is the smallest obs.hitbox_x (closest);
+    safe_max is the largest obs.hitbox_x (furthest).
     """
     if obs.type == "bird":
-        # Duck timer must outlast the bird-dino horizontal overlap.
         safe_min = float(dino_right)
         safe_max = float(dino_left - obs.width + dino_config.duck_duration * speed)
         return safe_min, safe_max
@@ -58,11 +56,16 @@ def safe_press_window(obs: ObstacleState, speed: int, dino_left: int, dino_right
     if frames is None:
         return 0.0, 0.0
     first_safe, last_safe = frames
-    # Overlap at game-frame N requires obs.hitbox_x < dino_right and > dino_left - obs.width.
-    # safe_min/safe_max are the X0 bounds that shift the integer overlap range into
-    # [first_safe, last_safe] exactly.
-    safe_min = float(dino_right + (first_safe - 1) * speed)
-    safe_max = float(dino_left + (last_safe + 1) * speed - obs.width)
+
+    # --- FIXED CACTUS BOUNDS ---
+    # Earliest safe jump (cactus furthest away -> largest X bound)
+    bound_a = float(dino_left + (last_safe + 1) * speed - obs.width)
+    # Latest safe jump (cactus closest -> smallest X bound)
+    bound_b = float(dino_right + (first_safe - 1) * speed)
+
+    safe_min = min(bound_a, bound_b)
+    safe_max = max(bound_a, bound_b)
+
     return safe_min, safe_max
 
 

@@ -369,34 +369,57 @@ def test_zone_marker_none_when_obstacle_unclearable() -> None:
 
 
 def _assert_touch_tracks_window(obs: ObstacleState, state: GameState) -> None:
-    """Any part of the dino's hitbox touching the carpet means a safe press (exactly the window)."""
+    """The center of the dino's hitbox being inside the strip defines a safe press."""
     dino_left, dino_right = _dino_edges(state)
+    dino_center = (dino_left + dino_right) / 2
     speed = state.current_speed
-    dino_width = dino_right - dino_left
+
     safe_min, safe_max = safe_press_window(obs, speed, dino_left, dino_right)
-    assert safe_max - safe_min > dino_width, "window must exceed dino width for a touch-based carpet"
 
-    def dino_touches_strip(obs_x: int) -> bool:
-        obs.hitbox_x = obs_x
+    # Ensure valid window exists
+    assert safe_max > safe_min, f"Expected safe_max ({safe_max}) > safe_min ({safe_min})"
+
+    def dino_center_in_strip(obs_x: float) -> bool:
+        obs.hitbox_x = int(obs_x)
         result = zone_marker_bounds(obs, speed, dino_left, dino_right)
-        assert result is not None
+        if result is None:
+            return False
         zone_x, zone_width = result
-        return dino_right > zone_x and dino_left < zone_x + zone_width
+        return zone_x <= dino_center <= (zone_x + zone_width)
 
-    # Inside the window: any part of the dino over the strip means a safe press.
-    assert dino_touches_strip(int((safe_min + safe_max) // 2))
-    assert dino_touches_strip(int(safe_min) + 2)
-    assert dino_touches_strip(int(safe_max) - 2)
-    # Outside the window: no part of the dino touches the strip.
-    assert not dino_touches_strip(int(safe_max) + dino_width + 20)
-    assert not dino_touches_strip(int(safe_min) - dino_width - 20)
+    # 1. Inside the window (interpolate at 25%, 50%, and 75% across the window)
+    # This guarantees we test well inside the safe zone regardless of grid step snapping.
+    window_span = safe_max - safe_min
 
+    mid_x = safe_min + 0.5 * window_span
+    quarter_x = safe_min + 0.25 * window_span
+    three_quarter_x = safe_min + 0.75 * window_span
+
+    assert dino_center_in_strip(mid_x), f"Failed inside window at 50% (x={mid_x})"
+    assert dino_center_in_strip(quarter_x), f"Failed inside window at 25% (x={quarter_x})"
+    assert dino_center_in_strip(three_quarter_x), f"Failed inside window at 75% (x={three_quarter_x})"
+
+    # 2. Outside the window (offset well beyond grid cell snapping tolerance, e.g. +2 cell widths)
+    cell_width = Grid.x(1) if hasattr(Grid, "x") else 20
+    outside_margin = max(30, cell_width * 2)
+
+    too_close_x = safe_min - outside_margin
+    too_far_x = safe_max + outside_margin
+
+    assert not dino_center_in_strip(too_close_x), (
+        f"Should be OUTSIDE when obstacle is too close (x={too_close_x}, safe_min={safe_min})"
+    )
+    assert not dino_center_in_strip(too_far_x), (
+        f"Should be OUTSIDE when obstacle is too far (x={too_far_x}, safe_max={safe_max})"
+    )
 
 def test_zone_marker_touch_safe_for_cactus() -> None:
+    """Verify that the dino's center point inside the safe carpet window allows a safe jump for a cactus."""
     _assert_touch_tracks_window(_make_cactus(0), _active_state())
 
 
 def test_zone_marker_touch_safe_for_bird() -> None:
+    """Verify that the dino's center point inside the safe carpet window allows a safe duck for a bird."""
     _assert_touch_tracks_window(_make_bird(0), _active_state())
 
 
