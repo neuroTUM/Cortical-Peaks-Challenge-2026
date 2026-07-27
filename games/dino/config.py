@@ -17,13 +17,13 @@ class DinoConfig:
     # Cactus dimensions
     # Kept at 1 grid unit so the jump safe-press window exceeds the dino's width, which lets the
     # zone marker be exact: any part of the dino touching the carpet guarantees a clear.
-    cactus_width: int = 1
-    cactus_height: int = 2
+    cactus_width: int = 1.2
+    cactus_height: int = 3.2
 
     # Bird dimensions (spawn height is derived from dino physics - see spawn_bird).
     # Tall enough that its top sits above the jump apex, so a bird can only be ducked, never jumped.
-    bird_width: int = 1
-    bird_height: int = 4
+    bird_width: int = 1.8
+    bird_height: int = 2.8
 
     # Cloud dimensions & spawn range
     cloud_width: int = 2
@@ -45,7 +45,7 @@ class DinoConfig:
     # carpet touch-exact (any pixel of the dino on the strip clears the bird).
     duck_duration: int = 19 * FPS // 10
     spawn_interval: int = 5 * FPS  # 5 seconds
-    max_obstacles: int = 10
+    max_obstacles: int = 100
     time_limit: int = 180 * FPS  # 3 minutes
 
     # --- Lives ---
