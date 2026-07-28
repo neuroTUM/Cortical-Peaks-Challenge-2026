@@ -404,7 +404,7 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
         if (
             spectator_client.keep_watching
             and game_state is not None
-            and (game_state.game_over or game_state.time_left <= 0)
+            and (game_state.game_over or game_state.reached_goal or game_state.time_left <= 0)
         ):
             spectator_client.await_next_game()
             game_state = None
@@ -418,7 +418,7 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             scale_to_screen(surface, screen)
             continue
 
-        if game_state.game_over or game_state.time_left <= 0:
+        if game_state.game_over or game_state.reached_goal or game_state.time_left <= 0:
             state.username_one = game_state.username
             state.score_one = game_state.score
             spectator_client.stop_watching()
