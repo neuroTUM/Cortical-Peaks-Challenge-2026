@@ -53,8 +53,12 @@ class SkiConfig:
     barrier_radius: int = 40
     barrier_transparent_padding: int = 30
 
-    obstacle_backsteps: int = 30
+    # Player collision
     knockback_duration: float = 2.0
+    static_obstacle_backsteps: int = 30
+    static_obstacle_backsteps_if_halfway: int = 30
+    dynamic_obstacle_backsteps: int = 9
+    dynamic_obstacle_backsteps_if_halfway: int = 15
 
     # Track Generation
     obstacle_seed: int = 1337
