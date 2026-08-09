@@ -17,7 +17,7 @@ _FMT_DINO_STATE = "!hhhhHHBBHHfH"  # 24 bytes
 _FMT_OBSTACLE = "!hhHHBH"  # 11 bytes
 # GameState fixed header: username time_left obstacle_count current_speed game_timer score
 #   game_over countdown clouds_offset track_offset spawn_timer is_paused lives
-_FMT_GAME_HEADER = "!16sfBHHHBfhhfBB"
+_FMT_GAME_HEADER = "!16sfBHHHBfiifBBB"
 
 _DINO_STATE_SIZE = struct.calcsize(_FMT_DINO_STATE)
 _OBSTACLE_SIZE = struct.calcsize(_FMT_OBSTACLE)
@@ -71,6 +71,7 @@ class GameState:
     spawn_timer: float = 0
     is_paused: bool = False
     lives: int = 0
+    jumponly: bool = False
     # Server-side only (never serialised): the pre-generated obstacle sequence and how far into it
     # we have spawned. Built from a fixed seed so every run is identical for all competitors.
     obstacle_plan: list[ObstacleState] = field(default_factory=list)
@@ -123,6 +124,7 @@ class _GameStateAdapter:
             state.spawn_timer,
             int(state.is_paused),
             state.lives,
+            state.jumponly,
         )
         return header + dino_bytes + obs_bytes
 
@@ -142,6 +144,7 @@ class _GameStateAdapter:
             spawn_timer,
             is_paused_b,
             lives,
+            jumponly,
         ) = struct.unpack_from(_FMT_GAME_HEADER, data, 0)
 
         dino_off = _GAME_HEADER_SIZE
@@ -204,6 +207,7 @@ class _GameStateAdapter:
             spawn_timer=spawn_timer,
             is_paused=bool(is_paused_b),
             lives=lives,
+            jumponly=jumponly,
         )
 
 
@@ -267,6 +271,7 @@ def create_initial_state(username: str, *, jump_only: bool = False, seed: int | 
         username=username,
         score=0,
         lives=dino_config.lives,
+        jumponly=jump_only,
         time_left=float(dino_config.time_limit) / FPS,
         clouds_offset=0,
         track_offset=0,

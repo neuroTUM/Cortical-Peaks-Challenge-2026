@@ -93,12 +93,12 @@ When a field is removed from or added to a game state struct, **both** `dump_byt
 Both Dino variants (Jump & Duck = `0x01`, Jump Only = `0x04`) use the identical layout below. The `content` bytes for a Dino `STATE` message are laid out as:
 
 ```
-[ GameState header (42 bytes) ][ DinoState (24 bytes) ][ ObstacleState × N (11 bytes each) ]
+[ GameState header (45 bytes) ][ DinoState (24 bytes) ][ ObstacleState × N (11 bytes each) ]
 ```
 
 `N` is given by `obstacle_count` in the header.
 
-#### GameState header — `"!16sfBHHHBfhhfBB"` (42 bytes)
+#### GameState header — `"!16sfBHHHBfiifBBB"` (46 bytes)
 
 | Offset | Type  | Field           | Notes                         |
 | ------ | ----- | --------------- | ----------------------------- |
@@ -110,11 +110,12 @@ Both Dino variants (Jump & Duck = `0x01`, Jump Only = `0x04`) use the identical 
 | 25     | `H`   | score           |                               |
 | 27     | `B`   | game_over       | `0x00` or `0x01`             |
 | 28     | `f`   | countdown       | pre-game countdown in seconds |
-| 32     | `h`   | clouds_offset   | pixels, wraps                 |
-| 34     | `h`   | track_offset    | pixels, wraps                 |
-| 36     | `f`   | spawn_timer     | frames since last spawn       |
-| 40     | `B`   | is_paused       | `0x00` or `0x01`             |
-| 41     | `B`   | lives           | remaining lives               |
+| 32     | `i`   | clouds_offset   | pixels, wraps                 |
+| 36     | `i`   | track_offset    | pixels, wraps                 |
+| 40     | `f`   | spawn_timer     | frames since last spawn       |
+| 44     | `B`   | is_paused       | `0x00` or `0x01`             |
+| 45     | `B`   | lives           | remaining lives               |
+| 46     | `B`   | jumponly           | brainski mode               |
 
 #### DinoState — `"!hhhhHHBBHHfH"` (24 bytes)
 

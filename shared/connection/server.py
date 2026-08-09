@@ -515,6 +515,7 @@ class GameServer(threading.Thread):
                 return
 
             dino_input = game_input if game_input in ("jump", "duck") else None
+            dino_input = None if dino_input == "duck" and self._dino_state.jumponly else dino_input
             self._dino_state = update_dino_state(self._dino_state, dino_input)  # type: ignore[arg-type]
             if not (self._dino_state.game_over or self._dino_state.time_left <= 0):
                 return
