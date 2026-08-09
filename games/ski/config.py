@@ -16,7 +16,18 @@ class SkiConfig:
 
     debug_colliders: bool = True  # enable/disable colliders
 
-    player_radius: int = 80
+    player_bounding_radius: float = 70.0
+
+    player_box1_width: float = 78.0
+    player_box1_height: float = 42.0
+    player_box1_offset_x: float = 0.0
+    player_box1_offset_y: float = -41.0
+
+    player_box2_width: float = 110.0
+    player_box2_height: float = 82.0
+    player_box2_offset_x: float = 0.0
+    player_box2_offset_y: float = 23.0
+
     obstacle_radius: int = 120
     goal_radius: int = 40
     goal_distance_grid: float = 20.0
@@ -26,9 +37,9 @@ class SkiConfig:
     obstacle_collider_offset_y: float = 0.0
 
     dynamic_capsule_p1_x: float = -84.0
-    dynamic_capsule_p1_y: float = 18.0
+    dynamic_capsule_p1_y: float = 17.0
     dynamic_capsule_p2_x: float = 81.0
-    dynamic_capsule_p2_y: float = 18.0
+    dynamic_capsule_p2_y: float = 17.0
     dynamic_capsule_radius: float = 22.0
 
     dynamic_sphere_offset_x: float = 0.0

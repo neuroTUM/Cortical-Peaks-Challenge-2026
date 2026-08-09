@@ -52,11 +52,38 @@ def _dist_to_segment(px: float, py: float, x1: float, y1: float, x2: float, y2: 
     return math.hypot(px - proj_x, py - proj_y)
 
 
+def _check_point_in_aabb_dist(px: float, py: float, cx: float, cy: float, w: float, h: float) -> float:
+    hw = w / 2.0
+    hh = h / 2.0
+    closest_x = max(cx - hw, min(px, cx + hw))
+    closest_y = max(cy - hh, min(py, cy + hh))
+    return math.hypot(px - closest_x, py - closest_y)
+
+
 def _check_collisions(state: SkiState) -> None:
     if state.knockback_timer > 0:
         return
 
-    pr = ski_config.player_radius
+    b1_w = ski_config.player_box1_width
+    b1_h = ski_config.player_box1_height
+    b1_ox = ski_config.player_box1_offset_x
+    b1_oy = ski_config.player_box1_offset_y
+
+    b2_w = ski_config.player_box2_width
+    b2_h = ski_config.player_box2_height
+    b2_ox = ski_config.player_box2_offset_x
+    b2_oy = ski_config.player_box2_offset_y
+
+    rad = math.radians(-state.angle)
+    cos_a = math.cos(rad)
+    sin_a = math.sin(rad)
+
+    def world_to_local(wx: float, wy: float) -> tuple[float, float]:
+        dx = wx - state.x
+        dy = wy - state.y
+        lx = dx * cos_a - dy * sin_a
+        ly = dx * sin_a + dy * cos_a
+        return lx, ly
 
     for obs in state.obstacles:
         hit = False
@@ -64,7 +91,12 @@ def _check_collisions(state: SkiState) -> None:
         if obs.speed > 0:
             sx = obs.x + ski_config.dynamic_sphere_offset_x
             sy = obs.y + ski_config.dynamic_sphere_offset_y
-            if math.hypot(state.x - sx, state.y - sy) < pr + ski_config.dynamic_sphere_radius:
+
+            lx, ly = world_to_local(sx, sy)
+            dist1 = _check_point_in_aabb_dist(lx, ly, b1_ox, b1_oy, b1_w, b1_h)
+            dist2 = _check_point_in_aabb_dist(lx, ly, b2_ox, b2_oy, b2_w, b2_h)
+
+            if dist1 < ski_config.dynamic_sphere_radius or dist2 < ski_config.dynamic_sphere_radius:
                 hit = True
 
             if not hit:
@@ -73,22 +105,37 @@ def _check_collisions(state: SkiState) -> None:
                 x2 = obs.x + ski_config.dynamic_capsule_p2_x
                 y2 = obs.y + ski_config.dynamic_capsule_p2_y
 
-                dist = _dist_to_segment(state.x, state.y, x1, y1, x2, y2)
-                if dist < pr + ski_config.dynamic_capsule_radius:
-                    hit = True
+                lx1, ly1 = world_to_local(x1, y1)
+                lx2, ly2 = world_to_local(x2, y2)
+
+                for i in range(5):
+                    t = i / 4.0
+                    px = lx1 + (lx2 - lx1) * t
+                    py = ly1 + (ly2 - ly1) * t
+
+                    dist1 = _check_point_in_aabb_dist(px, py, b1_ox, b1_oy, b1_w, b1_h)
+                    dist2 = _check_point_in_aabb_dist(px, py, b2_ox, b2_oy, b2_w, b2_h)
+
+                    if dist1 < ski_config.dynamic_capsule_radius or dist2 < ski_config.dynamic_capsule_radius:
+                        hit = True
+                        break
         else:
             cx = obs.x + ski_config.obstacle_collider_offset_x
             cy = obs.y + ski_config.obstacle_collider_offset_y
-            if math.hypot(state.x - cx, state.y - cy) < pr + ski_config.obstacle_collider_radius:
+
+            lx, ly = world_to_local(cx, cy)
+            dist1 = _check_point_in_aabb_dist(lx, ly, b1_ox, b1_oy, b1_w, b1_h)
+            dist2 = _check_point_in_aabb_dist(lx, ly, b2_ox, b2_oy, b2_w, b2_h)
+
+            if dist1 < ski_config.obstacle_collider_radius or dist2 < ski_config.obstacle_collider_radius:
                 hit = True
 
         if hit:
             state.knockback_timer = ski_config.knockback_duration
-            total_dx = 0.0
-            total_dy = -(ski_config.move_speed * ski_config.obstacle_backsteps)
-
-            state.knockback_dx = total_dx / ski_config.knockback_duration
-            state.knockback_dy = total_dy / ski_config.knockback_duration
+            state.knockback_dx = 0.0
+            state.knockback_dy = (
+                -(ski_config.move_speed * ski_config.obstacle_backsteps) / ski_config.knockback_duration
+            )
             return
 
 
@@ -126,7 +173,7 @@ def update_game_state(state: SkiState, player_input: str | None) -> SkiState:
         return state
 
     screen_w = Grid.x(12)
-    p_rad = ski_config.player_radius
+    p_rad = ski_config.player_bounding_radius
     margin = ski_config.track_margin_px
     b_vis_rad = ski_config.barrier_radius
     b_pad = ski_config.barrier_transparent_padding
