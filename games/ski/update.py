@@ -39,38 +39,51 @@ def _check_goal(state: SkiState) -> bool:
     return False
 
 
-def _check_collisions(state: SkiState) -> None:
+def _dist_to_segment(px: float, py: float, x1: float, y1: float, x2: float, y2: float) -> float:
+    dx = x2 - x1
+    dy = y2 - y1
+    l2 = dx * dx + dy * dy
+    if l2 == 0.0:
+        return math.hypot(px - x1, py - y1)
 
+    t = max(0.0, min(1.0, ((px - x1) * dx + (py - y1) * dy) / l2))
+    proj_x = x1 + t * dx
+    proj_y = y1 + t * dy
+    return math.hypot(px - proj_x, py - proj_y)
+
+
+def _check_collisions(state: SkiState) -> None:
     if state.knockback_timer > 0:
         return
 
     pr = ski_config.player_radius
 
     for obs in state.obstacles:
+        hit = False
+
         if obs.speed > 0:
-            hw = ski_config.dynamic_obstacle_hitbox_width / 2.0
-            hh = ski_config.dynamic_obstacle_hitbox_height / 2.0
-            offset_y = ski_config.dynamic_obstacle_hitbox_offset_y
+            sx = obs.x + ski_config.dynamic_sphere_offset_x
+            sy = obs.y + ski_config.dynamic_sphere_offset_y
+            if math.hypot(state.x - sx, state.y - sy) < pr + ski_config.dynamic_sphere_radius:
+                hit = True
+
+            if not hit:
+                x1 = obs.x + ski_config.dynamic_capsule_p1_x
+                y1 = obs.y + ski_config.dynamic_capsule_p1_y
+                x2 = obs.x + ski_config.dynamic_capsule_p2_x
+                y2 = obs.y + ski_config.dynamic_capsule_p2_y
+
+                dist = _dist_to_segment(state.x, state.y, x1, y1, x2, y2)
+                if dist < pr + ski_config.dynamic_capsule_radius:
+                    hit = True
         else:
-            hw = ski_config.obstacle_hitbox_width / 2.0
-            hh = ski_config.obstacle_hitbox_height / 2.0
-            offset_y = ski_config.obstacle_hitbox_offset_y
+            cx = obs.x + ski_config.obstacle_collider_offset_x
+            cy = obs.y + ski_config.obstacle_collider_offset_y
+            if math.hypot(state.x - cx, state.y - cy) < pr + ski_config.obstacle_collider_radius:
+                hit = True
 
-        hitbox_center_y = obs.y + offset_y
-
-        rect_left = obs.x - hw
-        rect_right = obs.x + hw
-        rect_top = hitbox_center_y - hh
-        rect_bottom = hitbox_center_y + hh
-
-        closest_x = max(rect_left, min(state.x, rect_right))
-        closest_y = max(rect_top, min(state.y, rect_bottom))
-
-        dist = math.hypot(state.x - closest_x, state.y - closest_y)
-
-        if dist < pr:
+        if hit:
             state.knockback_timer = ski_config.knockback_duration
-
             total_dx = 0.0
             total_dy = -(ski_config.move_speed * ski_config.obstacle_backsteps)
 

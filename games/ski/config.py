@@ -14,18 +14,26 @@ class SkiConfig:
     time_bonus_max_dynamic: float = 100.0
     time_bonus_grace_period: float = 0.0
 
-    debug_colliders: bool = False  # enable/disable colliders
+    debug_colliders: bool = True  # enable/disable colliders
 
     player_radius: int = 80
     obstacle_radius: int = 120
-    obstacle_hitbox_width: int = 160
-    obstacle_hitbox_height: int = 190
-    obstacle_hitbox_offset_y: float = 0.0
-    dynamic_obstacle_hitbox_width: int = 240
-    dynamic_obstacle_hitbox_height: int = 90
-    dynamic_obstacle_hitbox_offset_y: float = 20.0
     goal_radius: int = 40
     goal_distance_grid: float = 20.0
+
+    obstacle_collider_radius: float = 115.0
+    obstacle_collider_offset_x: float = 0.0
+    obstacle_collider_offset_y: float = 0.0
+
+    dynamic_capsule_p1_x: float = -84.0
+    dynamic_capsule_p1_y: float = 18.0
+    dynamic_capsule_p2_x: float = 81.0
+    dynamic_capsule_p2_y: float = 18.0
+    dynamic_capsule_radius: float = 22.0
+
+    dynamic_sphere_offset_x: float = 0.0
+    dynamic_sphere_offset_y: float = -22.0
+    dynamic_sphere_radius: float = 64.0
 
     track_margin_px: float = 5.0
     track_top_margin: float = 200.0
