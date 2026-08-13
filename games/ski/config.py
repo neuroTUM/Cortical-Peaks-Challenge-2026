@@ -16,16 +16,35 @@ class SkiConfig:
 
     debug_colliders: bool = False  # enable/disable colliders
 
-    player_radius: int = 80
+    player_bounding_radius: float = 70.0
+
+    player_box1_width: float = 78.0
+    player_box1_height: float = 42.0
+    player_box1_offset_x: float = 0.0
+    player_box1_offset_y: float = -41.0
+
+    player_box2_width: float = 110.0
+    player_box2_height: float = 82.0
+    player_box2_offset_x: float = 0.0
+    player_box2_offset_y: float = 23.0
+
     obstacle_radius: int = 120
-    obstacle_hitbox_width: int = 160
-    obstacle_hitbox_height: int = 190
-    obstacle_hitbox_offset_y: float = 0.0
-    dynamic_obstacle_hitbox_width: int = 240
-    dynamic_obstacle_hitbox_height: int = 90
-    dynamic_obstacle_hitbox_offset_y: float = 20.0
     goal_radius: int = 40
     goal_distance_grid: float = 20.0
+
+    obstacle_collider_radius: float = 115.0
+    obstacle_collider_offset_x: float = 0.0
+    obstacle_collider_offset_y: float = 0.0
+
+    dynamic_capsule_p1_x: float = -84.0
+    dynamic_capsule_p1_y: float = 17.0
+    dynamic_capsule_p2_x: float = 81.0
+    dynamic_capsule_p2_y: float = 17.0
+    dynamic_capsule_radius: float = 22.0
+
+    dynamic_sphere_offset_x: float = 0.0
+    dynamic_sphere_offset_y: float = -22.0
+    dynamic_sphere_radius: float = 64.0
 
     track_margin_px: float = 5.0
     track_top_margin: float = 200.0
@@ -34,8 +53,12 @@ class SkiConfig:
     barrier_radius: int = 40
     barrier_transparent_padding: int = 30
 
-    obstacle_backsteps: int = 30
+    # Player collision
     knockback_duration: float = 2.0
+    static_obstacle_backsteps: int = 9
+    static_obstacle_backsteps_if_halfway: int = 15
+    dynamic_obstacle_backsteps: int = 9
+    dynamic_obstacle_backsteps_if_halfway: int = 15
 
     # Track Generation
     obstacle_seed: int = 1337

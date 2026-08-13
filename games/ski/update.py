@@ -39,42 +39,112 @@ def _check_goal(state: SkiState) -> bool:
     return False
 
 
-def _check_collisions(state: SkiState) -> None:
+def _check_point_in_aabb_dist(px: float, py: float, cx: float, cy: float, w: float, h: float) -> float:
+    hw = w / 2.0
+    hh = h / 2.0
+    closest_x = max(cx - hw, min(px, cx + hw))
+    closest_y = max(cy - hh, min(py, cy + hh))
+    return math.hypot(px - closest_x, py - closest_y)
 
+
+def _check_collisions(state: SkiState) -> None:
     if state.knockback_timer > 0:
         return
 
-    pr = ski_config.player_radius
+    b1_w = ski_config.player_box1_width
+    b1_h = ski_config.player_box1_height
+    b1_ox = ski_config.player_box1_offset_x
+    b1_oy = ski_config.player_box1_offset_y
+
+    b2_w = ski_config.player_box2_width
+    b2_h = ski_config.player_box2_height
+    b2_ox = ski_config.player_box2_offset_x
+    b2_oy = ski_config.player_box2_offset_y
+
+    rad = math.radians(-state.angle)
+    cos_a = math.cos(rad)
+    sin_a = math.sin(rad)
+
+    def world_to_local(wx: float, wy: float) -> tuple[float, float]:
+        dx = wx - state.x
+        dy = wy - state.y
+        lx = dx * cos_a - dy * sin_a
+        ly = dx * sin_a + dy * cos_a
+        return lx, ly
 
     for obs in state.obstacles:
+        hit = False
+        hit_cy = 0.0
+        hit_is_dynamic = False
+
         if obs.speed > 0:
-            hw = ski_config.dynamic_obstacle_hitbox_width / 2.0
-            hh = ski_config.dynamic_obstacle_hitbox_height / 2.0
-            offset_y = ski_config.dynamic_obstacle_hitbox_offset_y
+            sx = obs.x + ski_config.dynamic_sphere_offset_x
+            sy = obs.y + ski_config.dynamic_sphere_offset_y
+
+            lx, ly = world_to_local(sx, sy)
+            dist1 = _check_point_in_aabb_dist(lx, ly, b1_ox, b1_oy, b1_w, b1_h)
+            dist2 = _check_point_in_aabb_dist(lx, ly, b2_ox, b2_oy, b2_w, b2_h)
+
+            if dist1 < ski_config.dynamic_sphere_radius or dist2 < ski_config.dynamic_sphere_radius:
+                hit = True
+                hit_cy = sy
+                hit_is_dynamic = True
+
+            if not hit:
+                x1 = obs.x + ski_config.dynamic_capsule_p1_x
+                y1 = obs.y + ski_config.dynamic_capsule_p1_y
+                x2 = obs.x + ski_config.dynamic_capsule_p2_x
+                y2 = obs.y + ski_config.dynamic_capsule_p2_y
+
+                lx1, ly1 = world_to_local(x1, y1)
+                lx2, ly2 = world_to_local(x2, y2)
+
+                for i in range(5):
+                    t = i / 4.0
+                    px = lx1 + (lx2 - lx1) * t
+                    py = ly1 + (ly2 - ly1) * t
+
+                    dist1 = _check_point_in_aabb_dist(px, py, b1_ox, b1_oy, b1_w, b1_h)
+                    dist2 = _check_point_in_aabb_dist(px, py, b2_ox, b2_oy, b2_w, b2_h)
+
+                    if dist1 < ski_config.dynamic_capsule_radius or dist2 < ski_config.dynamic_capsule_radius:
+                        hit = True
+                        hit_cy = y1 + (y2 - y1) * t
+                        hit_is_dynamic = True
+                        break
         else:
-            hw = ski_config.obstacle_hitbox_width / 2.0
-            hh = ski_config.obstacle_hitbox_height / 2.0
-            offset_y = ski_config.obstacle_hitbox_offset_y
+            cx = obs.x + ski_config.obstacle_collider_offset_x
+            cy = obs.y + ski_config.obstacle_collider_offset_y
 
-        hitbox_center_y = obs.y + offset_y
+            lx, ly = world_to_local(cx, cy)
+            dist1 = _check_point_in_aabb_dist(lx, ly, b1_ox, b1_oy, b1_w, b1_h)
+            dist2 = _check_point_in_aabb_dist(lx, ly, b2_ox, b2_oy, b2_w, b2_h)
 
-        rect_left = obs.x - hw
-        rect_right = obs.x + hw
-        rect_top = hitbox_center_y - hh
-        rect_bottom = hitbox_center_y + hh
+            if dist1 < ski_config.obstacle_collider_radius or dist2 < ski_config.obstacle_collider_radius:
+                hit = True
+                hit_cy = cy
+                hit_is_dynamic = False
 
-        closest_x = max(rect_left, min(state.x, rect_right))
-        closest_y = max(rect_top, min(state.y, rect_bottom))
-
-        dist = math.hypot(state.x - closest_x, state.y - closest_y)
-
-        if dist < pr:
+        if hit:
             state.knockback_timer = ski_config.knockback_duration
 
-            total_dx = 0.0
-            total_dy = -(ski_config.move_speed * ski_config.obstacle_backsteps)
+            player_bottom_y = (
+                state.y + ski_config.player_bounding_radius - 20
+            )  # -20 due to the radius being a big too much here, but its good for the outside wall detection
 
-            state.knockback_dx = total_dx / ski_config.knockback_duration
+            if hit_is_dynamic:
+                if player_bottom_y < hit_cy:
+                    backsteps = ski_config.dynamic_obstacle_backsteps_if_halfway
+                else:
+                    backsteps = ski_config.dynamic_obstacle_backsteps
+            elif player_bottom_y < hit_cy:
+                backsteps = ski_config.static_obstacle_backsteps_if_halfway
+            else:
+                backsteps = ski_config.static_obstacle_backsteps
+
+            total_dy = -(ski_config.move_speed * backsteps)
+
+            state.knockback_dx = 0.0
             state.knockback_dy = total_dy / ski_config.knockback_duration
             return
 
@@ -113,7 +183,7 @@ def update_game_state(state: SkiState, player_input: str | None) -> SkiState:
         return state
 
     screen_w = Grid.x(12)
-    p_rad = ski_config.player_radius
+    p_rad = ski_config.player_bounding_radius
     margin = ski_config.track_margin_px
     b_vis_rad = ski_config.barrier_radius
     b_pad = ski_config.barrier_transparent_padding

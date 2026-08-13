@@ -27,14 +27,14 @@ class SkiViewerRenderer:
     def __init__(self) -> None:
         AssetManager.load_all(SkiAsset, ObstacleAsset)
 
-        # Load and scale sprites
-        size = ski_config.player_radius * 2
+        size = ski_config.player_bounding_radius * 2
         raw_brain_moving = AssetManager.get(SkiAsset.BRAIN_MOVING)
         self.brain_moving_img = scale_to_fit(raw_brain_moving, size, size)
 
         raw_brain_stopped = AssetManager.get(SkiAsset.BRAIN_STOPPED)
         self.brain_stopped_img = scale_to_fit(raw_brain_stopped, size, size)
 
+        # Load and scale obstacle sprites
         obs_size = ski_config.obstacle_radius * 2
 
         raw_obs = AssetManager.get(ObstacleAsset.SPRITE)
@@ -151,7 +151,7 @@ class SkiViewerRenderer:
             rotated_arrow = pygame.transform.rotate(self.arrow_img, rotation)
 
             arrow_x = player_draw_x
-            arrow_y = player_draw_y - ski_config.player_radius - 40
+            arrow_y = player_draw_y - ski_config.player_bounding_radius - 40
 
             arrow_rect = rotated_arrow.get_rect(center=(arrow_x, arrow_y))
             surface.blit(rotated_arrow, arrow_rect.topleft)
@@ -160,45 +160,98 @@ class SkiViewerRenderer:
         draw_y = state.y - cam_y
 
         if state.is_moving:
-            rotated_brain = pygame.transform.rotate(self.brain_moving_img, -state.angle)
+            rotated_player = pygame.transform.rotate(self.brain_moving_img, -state.angle)
         else:
-            rotated_brain = pygame.transform.rotate(self.brain_stopped_img, -state.angle)
-        rect = rotated_brain.get_rect(center=(draw_x, draw_y))
-        surface.blit(rotated_brain, rect.topleft)
+            rotated_player = pygame.transform.rotate(self.brain_stopped_img, -state.angle)
+        rect = rotated_player.get_rect(center=(draw_x, draw_y))
+        surface.blit(rotated_player, rect.topleft)
 
-        # colliders for debugging/visualizing
         if ski_config.debug_colliders:
             debug_player_color = (0, 255, 0)  # Green
             debug_obs_color = (255, 0, 0)  # Red
             debug_wall_color = (0, 255, 255)  # Cyan
 
-            pygame.draw.circle(
-                surface, debug_player_color, (int(player_draw_x), int(player_draw_y)), ski_config.player_radius, width=2
-            )
+            draw_rad = math.radians(state.angle)
+            d_cos = math.cos(draw_rad)
+            d_sin = math.sin(draw_rad)
+
+            def local_to_screen(lx: float, ly: float) -> tuple[int, int]:
+                rx = lx * d_cos - ly * d_sin
+                ry = lx * d_sin + ly * d_cos
+                return int(player_draw_x + rx), int(player_draw_y + ry)
+
+            hw1 = ski_config.player_box1_width / 2.0
+            hh1 = ski_config.player_box1_height / 2.0
+            ox1 = ski_config.player_box1_offset_x
+            oy1 = ski_config.player_box1_offset_y
+
+            pts1 = [
+                local_to_screen(ox1 - hw1, oy1 - hh1),
+                local_to_screen(ox1 + hw1, oy1 - hh1),
+                local_to_screen(ox1 + hw1, oy1 + hh1),
+                local_to_screen(ox1 - hw1, oy1 + hh1),
+            ]
+            pygame.draw.polygon(surface, debug_player_color, pts1, width=2)
+
+            hw2 = ski_config.player_box2_width / 2.0
+            hh2 = ski_config.player_box2_height / 2.0
+            ox2 = ski_config.player_box2_offset_x
+            oy2 = ski_config.player_box2_offset_y
+
+            pts2 = [
+                local_to_screen(ox2 - hw2, oy2 - hh2),
+                local_to_screen(ox2 + hw2, oy2 - hh2),
+                local_to_screen(ox2 + hw2, oy2 + hh2),
+                local_to_screen(ox2 - hw2, oy2 + hh2),
+            ]
+            pygame.draw.polygon(surface, debug_player_color, pts2, width=2)
 
             for obs in state.obstacles:
                 obs_draw_x = obs.x - cam_x
                 obs_draw_y = obs.y - cam_y
 
                 if obs.speed > 0:
-                    box_w = ski_config.dynamic_obstacle_hitbox_width
-                    box_h = ski_config.dynamic_obstacle_hitbox_height
-                    offset_y = ski_config.dynamic_obstacle_hitbox_offset_y
+                    sx = int(obs_draw_x + ski_config.dynamic_sphere_offset_x)
+                    sy = int(obs_draw_y + ski_config.dynamic_sphere_offset_y)
+                    sr = int(ski_config.dynamic_sphere_radius)
+                    pygame.draw.circle(surface, debug_obs_color, (sx, sy), sr, width=2)
+
+                    x1 = obs_draw_x + ski_config.dynamic_capsule_p1_x
+                    y1 = obs_draw_y + ski_config.dynamic_capsule_p1_y
+                    x2 = obs_draw_x + ski_config.dynamic_capsule_p2_x
+                    y2 = obs_draw_y + ski_config.dynamic_capsule_p2_y
+                    cr = int(ski_config.dynamic_capsule_radius)
+
+                    pygame.draw.circle(surface, debug_obs_color, (int(x1), int(y1)), cr, width=2)
+                    pygame.draw.circle(surface, debug_obs_color, (int(x2), int(y2)), cr, width=2)
+
+                    dx, dy = x2 - x1, y2 - y1
+                    length = math.hypot(dx, dy)
+                    if length > 0:
+                        nx = (dy / length) * cr
+                        ny = (-dx / length) * cr
+
+                        pygame.draw.line(
+                            surface,
+                            debug_obs_color,
+                            (int(x1 + nx), int(y1 + ny)),
+                            (int(x2 + nx), int(y2 + ny)),
+                            width=2,
+                        )
+                        pygame.draw.line(
+                            surface,
+                            debug_obs_color,
+                            (int(x1 - nx), int(y1 - ny)),
+                            (int(x2 - nx), int(y2 - ny)),
+                            width=2,
+                        )
+
                 else:
-                    box_w = ski_config.obstacle_hitbox_width
-                    box_h = ski_config.obstacle_hitbox_height
-                    offset_y = ski_config.obstacle_hitbox_offset_y
+                    cx = int(obs_draw_x + ski_config.obstacle_collider_offset_x)
+                    cy = int(obs_draw_y + ski_config.obstacle_collider_offset_y)
+                    r = int(ski_config.obstacle_collider_radius)
 
-                obs_hw = box_w / 2.0
-                obs_hh = box_h / 2.0
-
-                hitbox_draw_y = obs_draw_y + offset_y
-
-                rect_x = int(obs_draw_x - obs_hw)
-                rect_y = int(hitbox_draw_y - obs_hh)
-
-                debug_rect = pygame.Rect(rect_x, rect_y, box_w, box_h)
-                pygame.draw.rect(surface, debug_obs_color, debug_rect, width=2)
+                    pygame.draw.circle(surface, debug_obs_color, (cx, cy), r, width=2)
 
             screen_w = Grid.x(12)
             margin = ski_config.track_margin_px
