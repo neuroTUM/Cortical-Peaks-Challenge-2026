@@ -14,7 +14,7 @@ class SkiConfig:
     time_bonus_max_dynamic: float = 100.0
     time_bonus_grace_period: float = 0.0
 
-    debug_colliders: bool = True  # enable/disable colliders
+    debug_colliders: bool = False  # enable/disable colliders
 
     player_bounding_radius: float = 70.0
 
@@ -55,8 +55,8 @@ class SkiConfig:
 
     # Player collision
     knockback_duration: float = 2.0
-    static_obstacle_backsteps: int = 30
-    static_obstacle_backsteps_if_halfway: int = 30
+    static_obstacle_backsteps: int = 9
+    static_obstacle_backsteps_if_halfway: int = 15
     dynamic_obstacle_backsteps: int = 9
     dynamic_obstacle_backsteps_if_halfway: int = 15
 

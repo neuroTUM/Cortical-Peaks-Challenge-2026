@@ -71,6 +71,8 @@ With all three running, start a game:
 3. **Pick a game on the server.** In the server window, open the **CONNECTIONS** tab and choose a game for a connected player: **BSJ** (BrainSki, jump only), **BSDJ** (BrainSki, jump & duck), **PONG PVP**, **PONG AI**, **SK1** (Brainski2, static obstacles), **SK2** (Brainski2, moving obstacles).
 4. **Watch it play.** In the spectator window, click the player in the **PLAYER** column. The game begins after a 10-second countdown and then responds to the BCI inputs.
 
+*Different configurations of the games can be run by updating the parameters within the config.py files within the game folders.*
+
 #### Developer flags
 
 The server and spectator accept extra flags for development, passed through `just run`:
