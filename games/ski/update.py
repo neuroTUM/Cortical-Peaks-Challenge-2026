@@ -137,11 +137,10 @@ def _check_collisions(state: SkiState) -> None:
                     backsteps = ski_config.dynamic_obstacle_backsteps_if_halfway
                 else:
                     backsteps = ski_config.dynamic_obstacle_backsteps
+            elif player_bottom_y < hit_cy:
+                backsteps = ski_config.static_obstacle_backsteps_if_halfway
             else:
-                if player_bottom_y < hit_cy:
-                    backsteps = ski_config.static_obstacle_backsteps_if_halfway
-                else:
-                    backsteps = ski_config.static_obstacle_backsteps
+                backsteps = ski_config.static_obstacle_backsteps
 
             total_dy = -(ski_config.move_speed * backsteps)
 
