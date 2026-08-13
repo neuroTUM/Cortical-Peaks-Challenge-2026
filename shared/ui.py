@@ -74,7 +74,7 @@ def mouse_pos_to_surface(screen: pygame.Surface) -> tuple[int, int]:
     return (int(raw_mouse[0] / scale_x), int(raw_mouse[1] / scale_y))
 
 
-def scale_to_fit(img: pygame.Surface, width: int, height: int) -> pygame.Surface:
+def scale_to_fit(img: pygame.Surface, width: float, height: float) -> pygame.Surface:
     orig_w, orig_h = img.get_size()
 
     # compute scaling factor while keeping aspect ratio
