@@ -66,6 +66,7 @@ class SpectatorClient:
         self.keep_watching: bool = True  # stay with this player past the score screen
         self.last_score: str = ""  # score from the most recently finished game
         self.last_username: str = ""  # player name from the most recently finished game
+        self.quick_switch: bool = False  # arrow-key switching between connected BCI players
 
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -94,6 +95,7 @@ class SpectatorClient:
         self.keep_watching = True
         self.last_score = ""
         self.last_username = ""
+        self.quick_switch = False
 
     def send_command(self, cmd: str) -> None:
         """No-op stub kept for compatibility. Server ignores spectator CMDs."""
@@ -115,6 +117,29 @@ class SpectatorClient:
     def toggle_keep_watching(self) -> None:
         """Flip whether the viewer stays with the current player after their game ends."""
         self.keep_watching = not self.keep_watching
+
+    def toggle_quick_switch(self) -> None:
+        """Flip whether arrow-key switching between connected BCI players is enabled."""
+        self.quick_switch = not self.quick_switch
+
+    def switch_bci(self, direction: int) -> None:
+        """Switch to the next (direction=1) or previous (direction=-1) connected BCI player."""
+        bci_sessions = [s for s in self.sessions if s.bci_connected]
+        if len(bci_sessions) < 2:
+            return
+        current_idx = next((i for i, s in enumerate(bci_sessions) if s.uid == self.spectating_uid), None)
+        if current_idx is None:
+            self.spectate(bci_sessions[0].uid)
+            return
+        new_idx = (current_idx + direction) % len(bci_sessions)
+        self.spectate(bci_sessions[new_idx].uid)
+
+    @property
+    def spectating_display_name(self) -> str:
+        """Display name of the currently spectated player, or empty string if unknown."""
+        if not self.spectating_uid:
+            return ""
+        return next((s.display_name for s in self.sessions if s.uid == self.spectating_uid), "")
 
     def await_next_game(self, score: str = "", username: str = "") -> None:
         """Drop the finished game but stay subscribed, storing the score for the waiting screen."""

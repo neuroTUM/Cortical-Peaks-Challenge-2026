@@ -297,6 +297,32 @@ def _draw_keep_watching_overlay(surface: pygame.Surface) -> None:
     surface.blit(txt, txt.get_rect(midleft=(Grid.x(0.3), Grid.y(11.3))))
 
 
+def _draw_quick_switch_overlay(surface: pygame.Surface) -> None:
+    """When quick-switch mode is on, draw the spectated player's name in the top-left corner."""
+    if not spectator_client.quick_switch:
+        return
+    name = spectator_client.spectating_display_name
+    label = f"Watching: {name}" if name else "Quick Switch (TAB)"
+    txt = SUBTEXT_FONT.render(label, True, HIGHLIGHT_COLOR)
+    surface.blit(txt, txt.get_rect(midleft=(Grid.x(0.3), Grid.y(0.5))))
+
+
+def _spectator_overlay(surface: pygame.Surface) -> None:
+    """Combined spectator HUD overlay: keep-watching hint + quick-switch name."""
+    _draw_keep_watching_overlay(surface)
+    _draw_quick_switch_overlay(surface)
+
+
+def _handle_switch_keys(event: pygame.event.Event) -> None:
+    """Handle Tab (toggle quick-switch) and arrow keys (switch BCI) in spectator game loops."""
+    if event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
+        spectator_client.toggle_quick_switch()
+    elif (
+        event.type == pygame.KEYDOWN and event.key in (pygame.K_LEFT, pygame.K_RIGHT) and spectator_client.quick_switch
+    ):
+        spectator_client.switch_bci(-1 if event.key == pygame.K_LEFT else 1)
+
+
 def _draw_waiting_screen(surface: pygame.Surface, screen: pygame.Surface) -> None:
     """Render the between-games waiting screen, showing the last game's score if available."""
     fill_surface(surface)
@@ -310,7 +336,7 @@ def _draw_waiting_screen(surface: pygame.Surface, screen: pygame.Surface) -> Non
             HIGHLIGHT_COLOR,
         )
         surface.blit(score_txt, score_txt.get_rect(center=Grid.pos(6, 6)))
-    _draw_keep_watching_overlay(surface)
+    _spectator_overlay(surface)
     scale_to_screen(surface, screen)
 
 
@@ -331,6 +357,7 @@ def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_k:
                 spectator_client.toggle_keep_watching()
+            _handle_switch_keys(event)
 
         if not spectator_client.connected:
             state.reset_to(Scene.LAUNCHER)
@@ -363,7 +390,7 @@ def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 fill_surface(surface)
                 txt = TEXT_FONT.render("Waiting for game state...", True, TEXT_COLOR)
                 surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
-                _draw_keep_watching_overlay(surface)
+                _spectator_overlay(surface)
                 scale_to_screen(surface, screen)
             continue
 
@@ -378,11 +405,11 @@ def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             fill_surface(surface)
             txt = HEADING_FONT.render(f"Game starting in {int(game_state.countdown) + 1}...", True, TEXT_COLOR)
             surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
-            _draw_keep_watching_overlay(surface)
+            _spectator_overlay(surface)
             scale_to_screen(surface, screen)
             continue
 
-        renderer.render_frame(surface, screen, game_state, overlay=_draw_keep_watching_overlay)
+        renderer.render_frame(surface, screen, game_state, overlay=_spectator_overlay)
 
 
 def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
@@ -402,6 +429,7 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_k:
                 spectator_client.toggle_keep_watching()
+            _handle_switch_keys(event)
 
         if not spectator_client.connected:
             state.reset_to(Scene.LAUNCHER)
@@ -435,7 +463,7 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 fill_surface(surface)
                 txt = TEXT_FONT.render("Waiting for game state...", True, TEXT_COLOR)
                 surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
-                _draw_keep_watching_overlay(surface)
+                _spectator_overlay(surface)
                 scale_to_screen(surface, screen)
             continue
 
@@ -450,11 +478,11 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             fill_surface(surface)
             txt = HEADING_FONT.render(f"Game starting in {int(game_state.countdown) + 1}...", True, TEXT_COLOR)
             surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
-            _draw_keep_watching_overlay(surface)
+            _spectator_overlay(surface)
             scale_to_screen(surface, screen)
             continue
 
-        renderer.render_frame(surface, screen, game_state, overlay=_draw_keep_watching_overlay)
+        renderer.render_frame(surface, screen, game_state, overlay=_spectator_overlay)
 
 
 def _run_spectator_leaderboard(surface: pygame.Surface, screen: pygame.Surface) -> None:
@@ -559,6 +587,7 @@ def _run_pong_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_k:
                 spectator_client.toggle_keep_watching()
+            _handle_switch_keys(event)
 
         if not spectator_client.connected:
             state.reset_to(Scene.LAUNCHER)
@@ -591,7 +620,7 @@ def _run_pong_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 fill_surface(surface)
                 txt = TEXT_FONT.render("Waiting for match...", True, TEXT_COLOR)
                 surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
-                _draw_keep_watching_overlay(surface)
+                _spectator_overlay(surface)
                 scale_to_screen(surface, screen)
             continue
 
@@ -605,7 +634,7 @@ def _run_pong_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             state.go_to(Scene.LEADERBOARD)
             return
 
-        renderer.render_frame(surface, screen, pong_state, overlay=_draw_keep_watching_overlay)
+        renderer.render_frame(surface, screen, pong_state, overlay=_spectator_overlay)
 
 
 def _run_spectator_app(surface: pygame.Surface, screen: pygame.Surface) -> None:
