@@ -299,18 +299,25 @@ def _spectator_overlay(surface: pygame.Surface) -> None:
 
 
 def _handle_switch_keys(event: pygame.event.Event) -> None:
-    """Handle Tab (toggle quick-switch) and arrow keys (switch BCI) in spectator game loops."""
-    if event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
-        spectator_client.toggle_quick_switch()
-    elif (
-        event.type == pygame.KEYDOWN and event.key in (pygame.K_LEFT, pygame.K_RIGHT) and spectator_client.quick_switch
-    ):
+    """Handle arrow-key BCI switching in spectator game loops. Only active when quick-switch is on."""
+    if event.type == pygame.KEYDOWN and event.key in (pygame.K_LEFT, pygame.K_RIGHT) and spectator_client.quick_switch:
         spectator_client.switch_bci(-1 if event.key == pygame.K_LEFT else 1)
 
 
 def _draw_waiting_screen(surface: pygame.Surface, screen: pygame.Surface) -> None:
-    """Render the between-games waiting screen, showing the last game's score if available."""
+    """Render the between-games waiting screen.
+
+    In admin mode with quick-switch on, a sequence leaderboard table is shown instead
+    of the single-score summary.
+    """
     fill_surface(surface)
+
+    if spectator_client.admin_mode and spectator_client.quick_switch:
+        _draw_sequence_leaderboard(surface)
+        _spectator_overlay(surface)
+        scale_to_screen(surface, screen)
+        return
+
     message = "WAITING FOR NEXT GAME TO START"
     txt = TEXT_FONT.render(message, True, TEXT_COLOR)
     surface.blit(txt, txt.get_rect(center=Grid.pos(6, 4)))
@@ -323,6 +330,49 @@ def _draw_waiting_screen(surface: pygame.Surface, screen: pygame.Surface) -> Non
         surface.blit(score_txt, score_txt.get_rect(center=Grid.pos(6, 6)))
     _spectator_overlay(surface)
     scale_to_screen(surface, screen)
+
+
+_SEQ_LB_HEADERS: list[str] = ["#", "NAME", "BSJ", "BSDJ", "S1", "S2", "TOTAL"]
+_SEQ_LB_COL_X: tuple[int, ...] = tuple(Grid.x(i) for i in [0.7, 2.5, 5.0, 6.5, 8.0, 9.5, 11.2])
+
+
+def _draw_sequence_leaderboard(surface: pygame.Surface) -> None:
+    """Draw the admin-only sequence leaderboard: connected BCI players and their per-game scores."""
+    entries = spectator_client.sequence_leaderboard
+
+    title = HEADING_FONT.render("COMPETITION LEADERBOARD", True, TEXT_COLOR)
+    surface.blit(title, title.get_rect(center=Grid.pos(6, 1.5)))
+
+    subtitle = SUBTEXT_FONT.render("WAITING FOR NEXT GAME TO START", True, ACCENT_COLOR)
+    surface.blit(subtitle, subtitle.get_rect(center=Grid.pos(6, 3)))
+
+    for col, header in enumerate(_SEQ_LB_HEADERS):
+        txt = SUBTEXT_FONT.render(header, True, ACCENT_COLOR)
+        surface.blit(txt, txt.get_rect(center=(_SEQ_LB_COL_X[col], Grid.y(4))))
+
+    if not entries:
+        txt = SUBTEXT_FONT.render("No scores yet", True, DISABLED_COLOR)
+        surface.blit(txt, txt.get_rect(center=Grid.pos(6, 6)))
+        return
+
+    row_y_start = 5
+    for row, entry in enumerate(entries):
+        y = Grid.y(row_y_start + row)
+        if y > Grid.y(11):
+            break
+        values = [
+            str(row + 1),
+            str(entry["name"])[:12],
+            str(int(entry["dino_jump"])),
+            str(int(entry["dino"])),
+            str(int(entry["ski"])),
+            str(int(entry["ski_dyn"])),
+            str(int(entry["total"])),
+        ]
+        row_color = HIGHLIGHT_COLOR if entry["name"] == spectator_client.spectating_display_name else TEXT_COLOR
+        for col, val in enumerate(values):
+            txt = SUBTEXT_FONT.render(val, True, row_color)
+            surface.blit(txt, txt.get_rect(center=(_SEQ_LB_COL_X[col], y)))
 
 
 def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
@@ -363,7 +413,12 @@ def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             and game_state is not None
             and (game_state.game_over or game_state.time_left <= 0)
         ):
-            spectator_client.await_next_game(str(game_state.score), game_state.username)
+            spectator_client.await_next_game(
+                str(game_state.score),
+                game_state.username,
+                spectator_client.spectating_game,
+                spectator_client.spectating_uid,
+            )
             game_state = None
 
         if game_state is None:
@@ -434,7 +489,12 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             and game_state is not None
             and (game_state.game_over or game_state.reached_goal or game_state.time_left <= 0)
         ):
-            spectator_client.await_next_game(str(game_state.score), game_state.username)
+            spectator_client.await_next_game(
+                str(game_state.score),
+                game_state.username,
+                spectator_client.spectating_game,
+                spectator_client.spectating_uid,
+            )
             game_state = None
 
         if game_state is None:
@@ -589,7 +649,12 @@ def _run_pong_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
         # When keeping watch, treat the finished match as 'wait for the next game' instead of leaving.
         if spectator_client.keep_watching and pong_state is not None and pong_state.game_over:
             winner_name = pong_state.player1_name if pong_state.winner == 1 else pong_state.player2_name
-            spectator_client.await_next_game(f"{pong_state.score_left}-{pong_state.score_right}", winner_name)
+            spectator_client.await_next_game(
+                f"{pong_state.score_left}-{pong_state.score_right}",
+                winner_name,
+                spectator_client.spectating_game,
+                spectator_client.spectating_uid,
+            )
             pong_state = None
 
         if pong_state is None:
@@ -644,8 +709,11 @@ def main_server() -> None:
     pygame.quit()
 
 
-def main_spectator() -> None:
+def main_spectator(*, admin: bool = False) -> None:
     surface, screen = init_pygame("BCI ARCADE - Spectator")
+    if admin:
+        spectator_client.admin_mode = True
+        spectator_client.quick_switch = True
     _run_spectator_app(surface, screen)
     pygame.quit()
 
@@ -659,6 +727,9 @@ def _parse_args() -> argparse.Namespace:
         help="Which mode to launch: 'server' (game authority) or 'spectator' (display client)",
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument(
+        "--admin", action="store_true", help="Admin spectator mode: enables sequence leaderboard overlay"
+    )
     parser.add_argument(
         "--audit", action="store_true", help="Write a JSON Lines audit log of server events to data/audit/"
     )

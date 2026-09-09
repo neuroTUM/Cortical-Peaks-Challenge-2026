@@ -5,4 +5,4 @@ args = _parse_args()
 if args.target == "server":
     main_server()
 else:
-    main_spectator()
+    main_spectator(admin=args.admin)

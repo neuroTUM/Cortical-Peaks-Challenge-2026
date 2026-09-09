@@ -122,3 +122,70 @@ def test_switch_bci_noop_with_single_player() -> None:
     client.spectating_uid = "a"
     client.switch_bci(1)
     assert client.spectating_uid == "a"
+
+
+def test_disconnect_resets_sequence_scores() -> None:
+    client = SpectatorClient()
+    client.sequence_scores = {"a": {"name": "alice", "total": 100}}
+    client.disconnect()
+    assert client.sequence_scores == {}
+
+
+def test_await_next_game_records_score_in_admin_mode() -> None:
+    client = SpectatorClient()
+    client.admin_mode = True
+    client.spectating_uid = "a"
+    client.sessions = [SessionInfo(uid="a", display_name="alice", game="", bci_connected=True)]
+
+    client.await_next_game("180", "alice", GameType.DINO_JUMP, "a")
+    assert client.sequence_scores["a"]["dino_jump"] == 180
+    assert client.sequence_scores["a"]["total"] == 180
+
+    client.await_next_game("150", "alice", GameType.SKI, "a")
+    assert client.sequence_scores["a"]["ski"] == 150
+    assert client.sequence_scores["a"]["total"] == 330
+
+
+def test_await_next_game_does_not_record_in_normal_mode() -> None:
+    client = SpectatorClient()
+    client.spectating_uid = "a"
+
+    client.await_next_game("180", "alice", GameType.DINO_JUMP, "a")
+
+    assert client.sequence_scores == {}
+
+
+def test_sequence_leaderboard_sorted_by_total_desc() -> None:
+    client = SpectatorClient()
+    client.admin_mode = True
+    client.sessions = [
+        SessionInfo(uid="a", display_name="alice", game="", bci_connected=True),
+        SessionInfo(uid="b", display_name="bob", game="", bci_connected=True),
+    ]
+    client.sequence_scores = {
+        "a": {"name": "alice", "dino_jump": 100, "dino": 50, "ski": 80, "ski_dyn": 60, "total": 290},
+        "b": {"name": "bob", "dino_jump": 200, "dino": 100, "ski": 50, "ski_dyn": 40, "total": 390},
+    }
+
+    lb = client.sequence_leaderboard
+    assert lb[0]["name"] == "bob"
+    assert lb[0]["total"] == 390
+    assert lb[1]["name"] == "alice"
+    assert lb[1]["total"] == 290
+
+
+def test_sequence_leaderboard_excludes_disconnected_players() -> None:
+    client = SpectatorClient()
+    client.admin_mode = True
+    client.sessions = [
+        SessionInfo(uid="a", display_name="alice", game="", bci_connected=True),
+        SessionInfo(uid="b", display_name="bob", game="", bci_connected=False),
+    ]
+    client.sequence_scores = {
+        "a": {"name": "alice", "dino_jump": 100, "dino": 0, "ski": 0, "ski_dyn": 0, "total": 100},
+        "b": {"name": "bob", "dino_jump": 200, "dino": 0, "ski": 0, "ski_dyn": 0, "total": 200},
+    }
+
+    lb = client.sequence_leaderboard
+    assert len(lb) == 1
+    assert lb[0]["name"] == "alice"

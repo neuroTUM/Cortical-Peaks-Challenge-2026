@@ -27,6 +27,14 @@ from shared.connection.protocol import (
 )
 from shared.log import log
 
+# Maps each game type to its column in the sequence score table.
+_SEQUENCE_GAME_COLUMNS: dict[GameType, str] = {
+    GameType.DINO_JUMP: "dino_jump",
+    GameType.DINO: "dino",
+    GameType.SKI: "ski",
+    GameType.SKI_DYN: "ski_dyn",
+}
+
 
 class SpectatorClient:
     """Manages viewer registration, session subscription, heartbeats, and state deserialization."""
@@ -67,6 +75,8 @@ class SpectatorClient:
         self.last_score: str = ""  # score from the most recently finished game
         self.last_username: str = ""  # player name from the most recently finished game
         self.quick_switch: bool = False  # arrow-key switching between connected BCI players
+        self.admin_mode: bool = False  # admin spectator: shows sequence leaderboard overlay
+        self.sequence_scores: dict[str, dict[str, str | float]] = {}  # uid -> per-game scores
 
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -96,6 +106,7 @@ class SpectatorClient:
         self.last_score = ""
         self.last_username = ""
         self.quick_switch = False
+        self.sequence_scores = {}
 
     def send_command(self, cmd: str) -> None:
         """No-op stub kept for compatibility. Server ignores spectator CMDs."""
@@ -141,14 +152,44 @@ class SpectatorClient:
             return ""
         return next((s.display_name for s in self.sessions if s.uid == self.spectating_uid), "")
 
-    def await_next_game(self, score: str = "", username: str = "") -> None:
+    def await_next_game(
+        self, score: str = "", username: str = "", game: GameType | None = None, uid: str | None = None
+    ) -> None:
         """Drop the finished game but stay subscribed, storing the score for the waiting screen."""
         self.last_score = score
         self.last_username = username
+        if self.admin_mode and game is not None and uid is not None:
+            self._record_sequence_score(uid, username, game, score)
         self.spectating_game = None
         self.latest_dino_state = None
         self.latest_pong_state = None
         self.latest_ski_state = None
+
+    def _record_sequence_score(self, uid: str, name: str, game: GameType, score: str) -> None:
+        """Accumulate per-player sequence scores for the admin leaderboard."""
+        column = _SEQUENCE_GAME_COLUMNS.get(game)
+        if column is None:
+            return
+        try:
+            value = float(score)
+        except ValueError:
+            return
+        entry = self.sequence_scores.setdefault(
+            uid, {"name": name, "dino_jump": 0.0, "dino": 0.0, "ski": 0.0, "ski_dyn": 0.0, "total": 0.0}
+        )
+        entry["name"] = name
+        entry[column] = value
+        entry["total"] = (
+            float(entry["dino_jump"]) + float(entry["dino"]) + float(entry["ski"]) + float(entry["ski_dyn"])
+        )
+
+    @property
+    def sequence_leaderboard(self) -> list[dict[str, float | str]]:
+        """Sequence scores sorted by total descending, only for connected BCI players."""
+        connected_uids = {s.uid for s in self.sessions if s.bci_connected}
+        entries = [dict(self.sequence_scores[uid]) for uid in self.sequence_scores if uid in connected_uids]
+        entries.sort(key=lambda e: -e["total"])
+        return entries
 
     def spectate(self, target_uid: str) -> None:
         """Subscribe to a player's state stream. Clears any previous state."""
