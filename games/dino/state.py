@@ -261,7 +261,7 @@ def generate_obstacle_plan(*, jump_only: bool, seed: int) -> list[ObstacleState]
 
 
 def create_initial_state(username: str, *, jump_only: bool = False, seed: int | None = None) -> GameState:
-    dino_start_x = Grid.x(2)
+    dino_start_x = Grid.x(1.5)  # left of center to give more visible track ahead
     dino_start_y = Grid.y(dino_config.ground_y)
 
     dino_w = Grid.x(dino_config.dino_width)

@@ -34,17 +34,17 @@ class DinoConfig:
     # --- Physics & Movement (Logical Pixels) ---
     # These represent actual pixel adjustments per frame on the server
     gravity: float = 0.6
-    jump_velocity: int = 24
+    jump_velocity: int = 26
 
-    game_speed: int = 15  # pixels per frame (constant for the whole run)
+    game_speed: int = 12  # pixels per frame (constant for the whole run)
     track_y_offset: int = 10  # visual tweak for the drawn track line
 
     # --- Game Mechanics (Frames & Timers) ---
     # Frame counts derive from FPS so the real-world durations stay correct if the tick rate changes.
     # 1.9s: long enough that the bird safe-press window exceeds the dino width, which keeps the bird
     # carpet touch-exact (any pixel of the dino on the strip clears the bird).
-    duck_duration: int = 22 * FPS // 10
-    spawn_interval: int = 5 * FPS  # 5 seconds
+    duck_duration: int = 24 * FPS // 10
+    spawn_interval: int = 8 * FPS  # 8 seconds between obstacles
     max_obstacles: int = 100
     time_limit: int = 180 * FPS  # 3 minutes
 
