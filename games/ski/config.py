@@ -29,7 +29,7 @@ class SkiConfig:
     player_box2_offset_y: float = 23.0
 
     obstacle_radius: int = 120
-    goal_radius: int = 40
+    goal_radius: int = 60
     goal_distance_grid: float = 20.0
 
     obstacle_collider_radius: float = 115.0

@@ -8,7 +8,7 @@ from shared.constants import HEIGHT, PONG_WINNING_SCORE, WIDTH
 class PongConfig:
     # --- Dimensions (pixels) ---
     paddle_width: int = 40
-    paddle_height: int = 180
+    paddle_height: int = 260
     puck_size: int = 40
 
     # --- Physics & Movement (pixels per step, step every N frames) ---

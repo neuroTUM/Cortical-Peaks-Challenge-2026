@@ -49,7 +49,7 @@ class DinoConfig:
     time_limit: int = 180 * FPS  # 3 minutes
 
     # --- Lives ---
-    lives: int = 3  # hits the dino can take before the run ends
+    lives: int = 7  # hits the dino can take before the run ends
     invuln_frames: int = 2 * FPS  # grace period after a hit (2 seconds) - collisions ignored while it lasts
 
     # --- Scoring ---
