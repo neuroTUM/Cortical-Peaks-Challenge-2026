@@ -297,6 +297,23 @@ def _draw_keep_watching_overlay(surface: pygame.Surface) -> None:
     surface.blit(txt, txt.get_rect(midleft=(Grid.x(0.3), Grid.y(11.3))))
 
 
+def _draw_waiting_screen(surface: pygame.Surface, screen: pygame.Surface) -> None:
+    """Render the between-games waiting screen, showing the last game's score if available."""
+    fill_surface(surface)
+    message = "WAITING FOR NEXT GAME TO START"
+    txt = TEXT_FONT.render(message, True, TEXT_COLOR)
+    surface.blit(txt, txt.get_rect(center=Grid.pos(6, 4)))
+    if spectator_client.last_score:
+        score_txt = HEADING_FONT.render(
+            f"{spectator_client.last_username}: {spectator_client.last_score} points",
+            True,
+            HIGHLIGHT_COLOR,
+        )
+        surface.blit(score_txt, score_txt.get_rect(center=Grid.pos(6, 6)))
+    _draw_keep_watching_overlay(surface)
+    scale_to_screen(surface, screen)
+
+
 def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
     clock = pygame.time.Clock()
     renderer = DinoViewerRenderer()
@@ -336,16 +353,18 @@ def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             and game_state is not None
             and (game_state.game_over or game_state.time_left <= 0)
         ):
-            spectator_client.await_next_game()
+            spectator_client.await_next_game(str(game_state.score), game_state.username)
             game_state = None
 
         if game_state is None:
-            fill_surface(surface)
-            message = "Waiting for next game..." if spectator_client.keep_watching else "Waiting for game state..."
-            txt = TEXT_FONT.render(message, True, TEXT_COLOR)
-            surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
-            _draw_keep_watching_overlay(surface)
-            scale_to_screen(surface, screen)
+            if spectator_client.keep_watching:
+                _draw_waiting_screen(surface, screen)
+            else:
+                fill_surface(surface)
+                txt = TEXT_FONT.render("Waiting for game state...", True, TEXT_COLOR)
+                surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
+                _draw_keep_watching_overlay(surface)
+                scale_to_screen(surface, screen)
             continue
 
         if game_state.game_over or game_state.time_left <= 0:
@@ -406,16 +425,18 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             and game_state is not None
             and (game_state.game_over or game_state.reached_goal or game_state.time_left <= 0)
         ):
-            spectator_client.await_next_game()
+            spectator_client.await_next_game(str(game_state.score), game_state.username)
             game_state = None
 
         if game_state is None:
-            fill_surface(surface)
-            message = "Waiting for next game..." if spectator_client.keep_watching else "Waiting for game state..."
-            txt = TEXT_FONT.render(message, True, TEXT_COLOR)
-            surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
-            _draw_keep_watching_overlay(surface)
-            scale_to_screen(surface, screen)
+            if spectator_client.keep_watching:
+                _draw_waiting_screen(surface, screen)
+            else:
+                fill_surface(surface)
+                txt = TEXT_FONT.render("Waiting for game state...", True, TEXT_COLOR)
+                surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
+                _draw_keep_watching_overlay(surface)
+                scale_to_screen(surface, screen)
             continue
 
         if game_state.game_over or game_state.reached_goal or game_state.time_left <= 0:
@@ -559,16 +580,19 @@ def _run_pong_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
 
         # When keeping watch, treat the finished match as 'wait for the next game' instead of leaving.
         if spectator_client.keep_watching and pong_state is not None and pong_state.game_over:
-            spectator_client.await_next_game()
+            winner_name = pong_state.player1_name if pong_state.winner == 1 else pong_state.player2_name
+            spectator_client.await_next_game(f"{pong_state.score_left}-{pong_state.score_right}", winner_name)
             pong_state = None
 
         if pong_state is None:
-            fill_surface(surface)
-            message = "Waiting for next game..." if spectator_client.keep_watching else "Waiting for match..."
-            txt = TEXT_FONT.render(message, True, TEXT_COLOR)
-            surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
-            _draw_keep_watching_overlay(surface)
-            scale_to_screen(surface, screen)
+            if spectator_client.keep_watching:
+                _draw_waiting_screen(surface, screen)
+            else:
+                fill_surface(surface)
+                txt = TEXT_FONT.render("Waiting for match...", True, TEXT_COLOR)
+                surface.blit(txt, txt.get_rect(center=Grid.pos(6, 5)))
+                _draw_keep_watching_overlay(surface)
+                scale_to_screen(surface, screen)
             continue
 
         if pong_state.game_over:

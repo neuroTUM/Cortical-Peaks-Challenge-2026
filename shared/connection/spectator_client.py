@@ -63,7 +63,9 @@ class SpectatorClient:
         self.sessions: list[SessionInfo] = []
         self.spectating_uid: str | None = None
         self.spectating_game: GameType | None = None
-        self.keep_watching: bool = False  # stay with this player past the score screen
+        self.keep_watching: bool = True  # stay with this player past the score screen
+        self.last_score: str = ""  # score from the most recently finished game
+        self.last_username: str = ""  # player name from the most recently finished game
 
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -88,7 +90,10 @@ class SpectatorClient:
         self.spectating_game = None
         self.latest_dino_state = None
         self.latest_pong_state = None
-        self.keep_watching = False
+        self.latest_ski_state = None
+        self.keep_watching = True
+        self.last_score = ""
+        self.last_username = ""
 
     def send_command(self, cmd: str) -> None:
         """No-op stub kept for compatibility. Server ignores spectator CMDs."""
@@ -105,16 +110,20 @@ class SpectatorClient:
         self.spectating_game = None
         self.latest_dino_state = None
         self.latest_pong_state = None
+        self.latest_ski_state = None
 
     def toggle_keep_watching(self) -> None:
         """Flip whether the viewer stays with the current player after their game ends."""
         self.keep_watching = not self.keep_watching
 
-    def await_next_game(self) -> None:
-        """Drop the finished game but stay subscribed, so we wait for this player's next game."""
+    def await_next_game(self, score: str = "", username: str = "") -> None:
+        """Drop the finished game but stay subscribed, storing the score for the waiting screen."""
+        self.last_score = score
+        self.last_username = username
         self.spectating_game = None
         self.latest_dino_state = None
         self.latest_pong_state = None
+        self.latest_ski_state = None
 
     def spectate(self, target_uid: str) -> None:
         """Subscribe to a player's state stream. Clears any previous state."""
@@ -124,6 +133,7 @@ class SpectatorClient:
         self.spectating_game = None
         self.latest_dino_state = None
         self.latest_pong_state = None
+        self.latest_ski_state = None
         msg = SpectateMessage(viewer_token=self.viewer_token, target_uid=target_uid)
         self.sock.sendto(to_bytes(msg), self.address)
 
