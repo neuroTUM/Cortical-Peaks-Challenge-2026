@@ -283,20 +283,6 @@ def _run_session_picker(surface: pygame.Surface, screen: pygame.Surface) -> None
         scale_to_screen(surface, screen)
 
 
-def _draw_keep_watching_overlay(surface: pygame.Surface) -> None:
-    """Draw the keep-watching status hint onto the logical surface.
-
-    Drawn as part of the frame (before it is scaled and flipped) so there is a single present per
-    frame and the hint does not flicker. Game renderers receive this via an overlay hook, so they
-    stay unaware of spectator controls.
-    """
-    on = spectator_client.keep_watching
-    label = "KEEP WATCHING: ON  (K)" if on else "KEEP WATCHING: OFF  (K)"
-    color = STATUS_OK_COLOR if on else DISABLED_COLOR
-    txt = SUBTEXT_FONT.render(label, True, color)
-    surface.blit(txt, txt.get_rect(midleft=(Grid.x(0.3), Grid.y(11.3))))
-
-
 def _draw_quick_switch_overlay(surface: pygame.Surface) -> None:
     """When quick-switch mode is on, draw the spectated player's name in the top-left corner."""
     if not spectator_client.quick_switch:
@@ -308,8 +294,7 @@ def _draw_quick_switch_overlay(surface: pygame.Surface) -> None:
 
 
 def _spectator_overlay(surface: pygame.Surface) -> None:
-    """Combined spectator HUD overlay: keep-watching hint + quick-switch name."""
-    _draw_keep_watching_overlay(surface)
+    """Spectator HUD overlay: quick-switch name when enabled."""
     _draw_quick_switch_overlay(surface)
 
 
@@ -355,8 +340,6 @@ def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 spectator_client.stop_watching()
                 state.reset_to(Scene.SESSION_PICKER)
                 return
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_k:
-                spectator_client.toggle_keep_watching()
             _handle_switch_keys(event)
 
         if not spectator_client.connected:
@@ -427,8 +410,6 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 spectator_client.stop_watching()
                 state.reset_to(Scene.SESSION_PICKER)
                 return
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_k:
-                spectator_client.toggle_keep_watching()
             _handle_switch_keys(event)
 
         if not spectator_client.connected:
@@ -585,8 +566,6 @@ def _run_pong_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
                 spectator_client.stop_watching()
                 state.reset_to(Scene.SESSION_PICKER)
                 return
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_k:
-                spectator_client.toggle_keep_watching()
             _handle_switch_keys(event)
 
         if not spectator_client.connected:
