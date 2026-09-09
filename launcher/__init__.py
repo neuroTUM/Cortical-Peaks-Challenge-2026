@@ -304,6 +304,11 @@ def _handle_switch_keys(event: pygame.event.Event) -> None:
         spectator_client.switch_bci(-1 if event.key == pygame.K_LEFT else 1)
 
 
+def _fmt_score(score: float) -> str:
+    """Format a score for display, rounding to at most 2 decimal places."""
+    return str(round(score, 2) if isinstance(score, float) and score != int(score) else int(score))
+
+
 def _draw_waiting_screen(surface: pygame.Surface, screen: pygame.Surface) -> None:
     """Render the between-games waiting screen.
 
@@ -414,7 +419,7 @@ def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             and (game_state.game_over or game_state.time_left <= 0)
         ):
             spectator_client.await_next_game(
-                str(game_state.score),
+                _fmt_score(game_state.score),
                 game_state.username,
                 spectator_client.spectating_game,
                 spectator_client.spectating_uid,
@@ -490,7 +495,7 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             and (game_state.game_over or game_state.reached_goal or game_state.time_left <= 0)
         ):
             spectator_client.await_next_game(
-                str(game_state.score),
+                _fmt_score(game_state.score),
                 game_state.username,
                 spectator_client.spectating_game,
                 spectator_client.spectating_uid,
@@ -533,10 +538,11 @@ def _run_spectator_leaderboard(surface: pygame.Surface, screen: pygame.Surface) 
     if state.winner:
         winner_name = state.username_one if state.winner == 1 else state.username_two
         result_line = (
-            f"{winner_name} WINS!  {state.username_one} {state.score_one} — {state.username_two} {state.score_two}"
+            f"{winner_name} WINS!  {state.username_one} {_fmt_score(state.score_one)} "
+            f"— {state.username_two} {_fmt_score(state.score_two)}"
         )
     else:
-        result_line = f"{state.username_one}: {state.score_one}" if state.username_one else ""
+        result_line = f"{state.username_one}: {_fmt_score(state.score_one)}" if state.username_one else ""
 
     col_x = tuple(Grid.x(i) for i in [0.75, 2.5, 5, 7, 9, 11])
     row_y = tuple(Grid.y(i) for i in range(3, 11))
