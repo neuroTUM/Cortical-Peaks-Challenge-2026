@@ -76,6 +76,7 @@ class SpectatorClient:
         self.last_username: str = ""  # player name from the most recently finished game
         self.quick_switch: bool = False  # arrow-key switching between connected BCI players
         self.admin_mode: bool = False  # admin spectator: shows sequence leaderboard overlay
+        self.switching: bool = False  # True after switch_bci until new state arrives
         self.sequence_scores: dict[str, dict[str, str | float]] = {}  # uid -> per-game scores
 
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -141,9 +142,11 @@ class SpectatorClient:
         current_idx = next((i for i, s in enumerate(bci_sessions) if s.uid == self.spectating_uid), None)
         if current_idx is None:
             self.spectate(bci_sessions[0].uid)
+            self.switching = True
             return
         new_idx = (current_idx + direction) % len(bci_sessions)
         self.spectate(bci_sessions[new_idx].uid)
+        self.switching = True
 
     @property
     def spectating_display_name(self) -> str:
@@ -272,6 +275,7 @@ class SpectatorClient:
             case StateMessage(content=content, game=game):
                 self.last_received_time = time.time()
                 self.spectating_game = game
+                self.switching = False
                 match game:
                     case GameType.DINO | GameType.DINO_JUMP:
                         self.latest_dino_state = GameStateAdapter.validate_bytes(content)

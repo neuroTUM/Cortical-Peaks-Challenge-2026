@@ -426,6 +426,8 @@ def _run_dino_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             game_state = None
 
         if game_state is None:
+            if spectator_client.switching:
+                continue  # keep last frame while waiting for new player's state
             if spectator_client.keep_watching:
                 _draw_waiting_screen(surface, screen)
             else:
@@ -502,6 +504,8 @@ def _run_ski_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             game_state = None
 
         if game_state is None:
+            if spectator_client.switching:
+                continue  # keep last frame while waiting for new player's state
             if spectator_client.keep_watching:
                 _draw_waiting_screen(surface, screen)
             else:
@@ -664,6 +668,8 @@ def _run_pong_game(surface: pygame.Surface, screen: pygame.Surface) -> None:
             pong_state = None
 
         if pong_state is None:
+            if spectator_client.switching:
+                continue  # keep last frame while waiting for new player's state
             if spectator_client.keep_watching:
                 _draw_waiting_screen(surface, screen)
             else:
