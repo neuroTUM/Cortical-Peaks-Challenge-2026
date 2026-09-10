@@ -18,16 +18,24 @@ if TYPE_CHECKING:
 class Leaderboard:
     _path: ClassVar[Path] = DATA_DIR / "leaderboard.json"
     _lock: ClassVar[threading.Lock] = threading.Lock()
-    HEADERS: ClassVar[list[str]] = ["#", "NAME", "DINO", "PONG", "SKI", "TOTAL"]
-    COL_X: ClassVar[tuple[int, ...]] = tuple(Grid.x(i) for i in [0.75, 2.5, 5, 7, 9, 11])
+    HEADERS: ClassVar[list[str]] = ["#", "NAME", "BSJ", "BSDJ", "PONG", "S1", "S2"]
+    COL_X: ClassVar[tuple[int, ...]] = tuple(Grid.x(i) for i in [0.5, 2.5, 5.0, 6.5, 8.0, 9.5, 11.0])
     ROW_Y: ClassVar[tuple[int, ...]] = tuple(Grid.y(i) for i in range(2, 10))
 
     @classmethod
-    def record_dino(cls, name: str, score: int) -> None:
+    def record_dino_jump(cls, name: str, score: int) -> None:
         with cls._lock:
             entries = cls._load()
             entry = cls._get_or_create(entries, name)
-            entry["dino"] += score
+            entry["bsj"] += score
+            cls._commit(entries, entry)
+
+    @classmethod
+    def record_dino_jd(cls, name: str, score: int) -> None:
+        with cls._lock:
+            entries = cls._load()
+            entry = cls._get_or_create(entries, name)
+            entry["bsdj"] += score
             cls._commit(entries, entry)
 
     @classmethod
@@ -41,11 +49,19 @@ class Leaderboard:
             cls._commit(entries, entry)
 
     @classmethod
-    def record_ski(cls, name: str, score: float) -> None:
+    def record_ski_static(cls, name: str, score: float) -> None:
         with cls._lock:
             entries = cls._load()
             entry = cls._get_or_create(entries, name)
-            entry["ski"] += int(score)
+            entry["s1"] += int(score)
+            cls._commit(entries, entry)
+
+    @classmethod
+    def record_ski_dyn(cls, name: str, score: float) -> None:
+        with cls._lock:
+            entries = cls._load()
+            entry = cls._get_or_create(entries, name)
+            entry["s2"] += int(score)
             cls._commit(entries, entry)
 
     @classmethod
@@ -63,9 +79,18 @@ class Leaderboard:
     def _load(cls) -> list[dict[str, Any]]:
         if cls._path.exists():
             try:
-                return json.loads(cls._path.read_text())
+                entries = json.loads(cls._path.read_text())
             except json.JSONDecodeError:
                 return []
+            # Migrate entries saved with an older schema so missing columns don't crash the UI.
+            for entry in entries:
+                entry.setdefault("bsj", entry.pop("dino", 0))
+                entry.setdefault("bsdj", 0)
+                entry.setdefault("pong", 0)
+                entry.setdefault("s1", entry.pop("ski", 0))
+                entry.setdefault("s2", 0)
+                entry.setdefault("total", 0)
+            return entries
         return []
 
     @classmethod
@@ -81,13 +106,13 @@ class Leaderboard:
         for entry in entries:
             if entry["name"] == name:
                 return entry
-        entry: dict[str, Any] = {"name": name, "dino": 0, "pong": 0, "ski": 0, "total": 0}
+        entry: dict[str, Any] = {"name": name, "bsj": 0, "bsdj": 0, "pong": 0, "s1": 0, "s2": 0, "total": 0}
         entries.append(entry)
         return entry
 
     @classmethod
     def _commit(cls, entries: list[dict[str, Any]], entry: dict[str, Any]) -> None:
-        entry["total"] = entry["dino"] + entry["pong"] + entry["ski"]
+        entry["total"] = entry["bsj"] + entry["bsdj"] + entry["pong"] + entry["s1"] + entry["s2"]
         entries.sort(key=lambda e: -e["total"])
         cls._save(entries)
 
@@ -138,11 +163,12 @@ def run_leaderboard(surface: pygame.Surface, screen: pygame.Surface) -> None:
             rank = scroll_offset + row + 1
             values = [
                 str(rank),
-                entry["name"],
-                str(entry["dino"]),
+                str(entry["name"])[:12],
+                str(entry["bsj"]),
+                str(entry["bsdj"]),
                 str(entry["pong"]),
-                str(entry["ski"]),
-                str(entry["total"]),
+                str(entry["s1"]),
+                str(entry["s2"]),
             ]
             for col, val in enumerate(values):
                 txt = SUBTEXT_FONT.render(val, True, TEXT_COLOR)

@@ -157,3 +157,26 @@ def test_start_for_different_tokens_run_concurrently() -> None:
     assert tokens == {"a", "b"}
     seq.stop()
     seq.join(timeout=5)
+
+
+def test_sequence_aborts_when_manual_start_overtakes() -> None:
+    """If the operator clicks a different game button while the sequence is running,
+    the sequence detects the game change, aborts, and the S button becomes available again.
+    """
+    player = _player("t1")
+    server = _FakeServer([player], finish_after=10.0)  # long so the game is "running"
+    seq = GameSequence(server, delay=0.0)
+
+    seq.start("t1")
+    time.sleep(0.2)  # let the first game (DINO_JUMP) start
+    assert seq.is_running("t1")
+
+    # Operator clicks BSDJ — overtakes the sequence's DINO_JUMP
+    server.start_game("t1", GameType.DINO)
+    time.sleep(0.5)  # let _wait_until_done detect the game mismatch
+
+    # Sequence should have aborted
+    assert not seq.is_running("t1"), "Sequence should abort after manual overtakes"
+
+    # S button should be available again
+    assert not seq.is_running("t1")

@@ -124,8 +124,8 @@ def run_connections(surface: pygame.Surface, screen: pygame.Surface) -> None:
         max_scroll = max(0, len(connection_page.entries) - visible_rows)
         scroll_offset = min(scroll_offset, max_scroll)
 
-        # Remove staged players that are no longer eligible (disconnected, in game, etc.)
-        eligible_uids = {e.uid for e in connection_page.entries if e.bci and not e.in_match and not e.game}
+        # Remove staged players that are no longer connected
+        eligible_uids = {e.uid for e in connection_page.entries if e.bci}
         pong_staging &= eligible_uids
 
         mouse_pos = mouse_pos_to_surface(screen)
@@ -137,46 +137,44 @@ def run_connections(surface: pygame.Surface, screen: pygame.Surface) -> None:
             y = ConnectionPage.ROW_Y[row + 1]
             uid = entry.uid
             bci_ok = entry.bci
-            dino_ready = bci_ok and not entry.in_match
-            game_eligible = bci_ok and not entry.in_match and not entry.game
 
             dino_btn = Button(
                 (ConnectionPage.COL_X[5], y),
                 "BSDJ",
                 SUBTEXT_FONT,
-                on_click=(lambda u=uid: make_dino_cb(u)) if dino_ready else None,
+                on_click=(lambda u=uid: make_dino_cb(u)) if bci_ok else None,
             )
             jump_btn = Button(
                 (ConnectionPage.COL_X[6], y),
                 "BSJ",
                 SUBTEXT_FONT,
-                on_click=(lambda u=uid: make_dino_jump_cb(u)) if dino_ready else None,
+                on_click=(lambda u=uid: make_dino_jump_cb(u)) if bci_ok else None,
             )
             pong_btn = Button(
                 (ConnectionPage.COL_X[7], y),
                 "P",
                 SUBTEXT_FONT,
-                on_click=(lambda u=uid: toggle_pong(u)) if game_eligible else None,
+                on_click=(lambda u=uid: toggle_pong(u)) if bci_ok else None,
             )
             ai_btn = Button(
                 (ConnectionPage.COL_X[8], y),
                 "A",
                 SUBTEXT_FONT,
-                on_click=(lambda u=uid: make_pong_ai_cb(u)) if game_eligible else None,
+                on_click=(lambda u=uid: make_pong_ai_cb(u)) if bci_ok else None,
             )
             sk1_btn = Button(
                 (ConnectionPage.COL_X[9], y),
                 "S1",
                 SUBTEXT_FONT,
-                on_click=(lambda u=uid: make_ski_cb(u)) if game_eligible else None,
+                on_click=(lambda u=uid: make_ski_cb(u)) if bci_ok else None,
             )
             sk2_btn = Button(
                 (ConnectionPage.COL_X[10], y),
                 "S2",
                 SUBTEXT_FONT,
-                on_click=(lambda u=uid: make_ski_dyn_cb(u)) if game_eligible else None,
+                on_click=(lambda u=uid: make_ski_dyn_cb(u)) if bci_ok else None,
             )
-            sequence_eligible = game_eligible and not sequence.is_running(uid)
+            sequence_eligible = bci_ok and not sequence.is_running(uid)
             seq_btn = Button(
                 (ConnectionPage.COL_X[11], y),
                 "S",

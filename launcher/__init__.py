@@ -337,8 +337,8 @@ def _draw_waiting_screen(surface: pygame.Surface, screen: pygame.Surface) -> Non
     scale_to_screen(surface, screen)
 
 
-_SEQ_LB_HEADERS: list[str] = ["#", "NAME", "BSJ", "BSDJ", "S1", "S2", "TOTAL"]
-_SEQ_LB_COL_X: tuple[int, ...] = tuple(Grid.x(i) for i in [0.7, 2.5, 5.0, 6.5, 8.0, 9.5, 11.2])
+_SEQ_LB_HEADERS: list[str] = ["#", "NAME", "BSJ", "BSDJ", "S1", "S2"]
+_SEQ_LB_COL_X: tuple[int, ...] = tuple(Grid.x(i) for i in [0.7, 2.5, 5.0, 6.5, 8.5, 10.5])
 
 
 def _draw_sequence_leaderboard(surface: pygame.Surface) -> None:
@@ -372,7 +372,6 @@ def _draw_sequence_leaderboard(surface: pygame.Surface) -> None:
             str(int(entry["dino"])),
             str(int(entry["ski"])),
             str(int(entry["ski_dyn"])),
-            str(int(entry["total"])),
         ]
         row_color = HIGHLIGHT_COLOR if entry["name"] == spectator_client.spectating_display_name else TEXT_COLOR
         for col, val in enumerate(values):
@@ -544,9 +543,9 @@ def _run_spectator_leaderboard(surface: pygame.Surface, screen: pygame.Surface) 
     else:
         result_line = f"{state.username_one}: {_fmt_score(state.score_one)}" if state.username_one else ""
 
-    col_x = tuple(Grid.x(i) for i in [0.75, 2.5, 5, 7, 9, 11])
+    col_x = tuple(Grid.x(i) for i in [0.5, 2.5, 5.0, 6.5, 8.0, 9.5, 11.0])
     row_y = tuple(Grid.y(i) for i in range(3, 11))
-    headers = ["#", "NAME", "DINO", "PONG", "SKI", "TOTAL"]
+    headers = ["#", "NAME", "BSJ", "BSDJ", "PONG", "S1", "S2"]
     visible_rows = 6
     scroll_offset = 0
     max_scroll = max(0, len(entries) - visible_rows)
@@ -594,11 +593,12 @@ def _run_spectator_leaderboard(surface: pygame.Surface, screen: pygame.Surface) 
             for col, val in enumerate(
                 [
                     str(rank),
-                    entry["name"],
-                    str(entry["dino"]),
+                    str(entry["name"])[:12],
+                    str(entry["bsj"]),
+                    str(entry["bsdj"]),
                     str(entry["pong"]),
-                    str(entry["ski"]),
-                    str(entry["total"]),
+                    str(entry["s1"]),
+                    str(entry["s2"]),
                 ]
             ):
                 txt = SUBTEXT_FONT.render(val, True, TEXT_COLOR)

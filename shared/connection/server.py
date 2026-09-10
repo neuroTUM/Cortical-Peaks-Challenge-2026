@@ -483,6 +483,11 @@ class GameServer(threading.Thread):
             self._active_game = game_type
             self._has_started = True
             self.player.game = game_type
+            # Clear all game states so starting a new game while one is running
+            # doesn't leave stale state from the previous game type.
+            self._dino_state = None
+            self._pong_state = None
+            self._ski_state = None
             match game_type:
                 case GameType.DINO | GameType.DINO_JUMP:
                     jump_only = game_type == GameType.DINO_JUMP
@@ -523,7 +528,10 @@ class GameServer(threading.Thread):
             self._game_over_at = time.time()
             self.player.game = None
             self.server.push_sessions()
-            Leaderboard.record_dino(self.player.display_name, self._dino_state.score)
+            if self._dino_state.jumponly:
+                Leaderboard.record_dino_jump(self.player.display_name, self._dino_state.score)
+            else:
+                Leaderboard.record_dino_jd(self.player.display_name, self._dino_state.score)
             audit.record("game_over", token=self.player.bci_token, game="dino", score=self._dino_state.score)
             log.info("[%s] Dino game over (score=%d)", self.player.bci_token, self._dino_state.score)
 
@@ -576,7 +584,10 @@ class GameServer(threading.Thread):
                                 self._game_over_at = time.time()
                                 self.player.game = None
                                 self.server.push_sessions()
-                                Leaderboard.record_ski(self.player.display_name, self._ski_state.score)
+                                if self._active_game == GameType.SKI_DYN:
+                                    Leaderboard.record_ski_dyn(self.player.display_name, self._ski_state.score)
+                                else:
+                                    Leaderboard.record_ski_static(self.player.display_name, self._ski_state.score)
                                 audit.record(
                                     "game_over", token=self.player.bci_token, game="ski", score=self._ski_state.score
                                 )

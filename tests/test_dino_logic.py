@@ -387,17 +387,18 @@ def _assert_touch_tracks_window(obs: ObstacleState, state: GameState) -> None:
         zone_x, zone_width = result
         return zone_x <= dino_center <= (zone_x + zone_width)
 
-    # 1. Inside the window (interpolate at 25%, 50%, and 75% across the window)
-    # This guarantees we test well inside the safe zone regardless of grid step snapping.
+    # 1. Inside the window (interpolate at 40%, 50%, and 60% across the window)
+    # Grid snapping can clip up to half a cell at each edge, so we stay within the
+    # central portion of the window where the snapped strip is guaranteed to cover.
     window_span = safe_max - safe_min
 
     mid_x = safe_min + 0.5 * window_span
-    quarter_x = safe_min + 0.25 * window_span
-    three_quarter_x = safe_min + 0.75 * window_span
+    lower_x = safe_min + 0.4 * window_span
+    upper_x = safe_min + 0.6 * window_span
 
     assert dino_center_in_strip(mid_x), f"Failed inside window at 50% (x={mid_x})"
-    assert dino_center_in_strip(quarter_x), f"Failed inside window at 25% (x={quarter_x})"
-    assert dino_center_in_strip(three_quarter_x), f"Failed inside window at 75% (x={three_quarter_x})"
+    assert dino_center_in_strip(lower_x), f"Failed inside window at 40% (x={lower_x})"
+    assert dino_center_in_strip(upper_x), f"Failed inside window at 60% (x={upper_x})"
 
     # 2. Outside the window (offset well beyond grid cell snapping tolerance, e.g. +2 cell widths)
     cell_width = Grid.x(1) if hasattr(Grid, "x") else 20

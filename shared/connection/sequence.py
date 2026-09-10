@@ -86,7 +86,7 @@ class GameSequence:
                 break
             log.info("Game sequence [%s]: starting %s", token, game_type)
             self._server.start_game(token, game_type)
-            if not self._wait_until_done(token):
+            if not self._wait_until_done(token, game_type):
                 break
             if self._stop.is_set():
                 break
@@ -94,13 +94,24 @@ class GameSequence:
             self._sleep(self._delay)
         log.info("Game sequence [%s]: complete", token)
 
-    def _wait_until_done(self, token: str) -> bool:
-        """Block until the player's game has ended. Returns False if the player vanished."""
+    def _wait_until_done(self, token: str, expected_game: GameType) -> bool:
+        """Block until the player's game has ended.
+
+        Returns False if the player vanished or if the game was overtaken by a manual
+        start (the operator clicked a different game button), so the sequence aborts
+        and the S button becomes available again.
+        """
         while not self._stop.is_set():
             players, _ = self._server.snapshot_players_viewers()
             player = next((p for p in players if p.bci_token == token), None)
             if player is None or not player.bci.is_connected:
                 log.warning("Game sequence [%s]: player disconnected, aborting", token)
+                return False
+            if player.pending_start is not None and player.pending_start != expected_game:
+                log.info("Game sequence [%s]: overtaken by manual start (%s), aborting", token, player.pending_start)
+                return False
+            if player.game is not None and player.game != expected_game:
+                log.info("Game sequence [%s]: overtaken by manual start (%s), aborting", token, player.game)
                 return False
             if player.game is None and player.pending_start is None:
                 return True

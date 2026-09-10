@@ -217,6 +217,24 @@ GameStateAdapter = _GameStateAdapter()
 _SPAWN_X = Grid.x(12) + Grid.x(2)  # just off the right edge; every obstacle enters here
 
 
+def _jump_apex_height(jump_velocity: int, gravity: float) -> int:
+    """How many pixels the dino's base_y rises above ground at the peak of a jump.
+
+    Mirrors the discrete physics in update.py (int truncation toward zero) so the result
+    matches what the player actually experiences.
+    """
+    y_speed = -float(jump_velocity)
+    base_y = 0  # signed offset from ground; rises negative
+    apex = 0
+    while True:
+        y_speed += gravity
+        base_y += int(y_speed)
+        if base_y >= 0:
+            break
+        apex = min(apex, base_y)
+    return -apex
+
+
 def spawn_cactus(x: int) -> ObstacleState:
     """Build a ground-anchored cactus obstacle centered horizontally on x."""
     width = Grid.x(dino_config.cactus_width)
@@ -226,7 +244,11 @@ def spawn_cactus(x: int) -> ObstacleState:
 
 
 def spawn_bird(x: int, rng: random.Random) -> ObstacleState:
-    """Build a bird obstacle at x, placed (via rng) to hit a standing dino but clear a ducking one."""
+    """Build a bird obstacle at x, placed (via rng) to hit a standing dino but clear a ducking one.
+
+    The spawn ceiling is also constrained by the jump apex so a bird can never be
+    jumped over — it can only be ducked.
+    """
     width = Grid.x(dino_config.bird_width)
     height = Grid.y(dino_config.bird_height)
     half_h = height // 2
@@ -236,6 +258,12 @@ def spawn_bird(x: int, rng: random.Random) -> ObstacleState:
     # bird_bottom <= dino_ducking_top  =>  center_y <= ground - dino_duck_height - half_h
     center_y_min = ground - Grid.y(dino_config.dino_height) - half_h + 1
     center_y_max = ground - Grid.y(dino_config.dino_duck_height) - half_h
+
+    # bird_top < apex_base_y  =>  center_y - half_h < ground - apex_height
+    #                           =>  center_y < ground - apex_height + half_h
+    apex_height = _jump_apex_height(dino_config.jump_velocity, dino_config.gravity)
+    center_y_max = min(center_y_max, ground - apex_height + half_h - 1)
+
     center_y = rng.randint(center_y_min, center_y_max)
     return ObstacleState(x - (width // 2), center_y - half_h, width, height, "bird")
 
