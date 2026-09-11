@@ -64,7 +64,7 @@ def test_sequence_matches_spec() -> None:
 
 def test_sequence_starts_games_in_order() -> None:
     server = _FakeServer([_player("t1")], finish_after=0.05)
-    seq = GameSequence(server, delay=0.0)
+    seq = GameSequence(server, continue_timeout=0.0)
 
     seq.start("t1")
     assert seq.is_running("t1")
@@ -76,7 +76,7 @@ def test_sequence_starts_games_in_order() -> None:
 
 def test_sequence_starts_independently_per_player() -> None:
     server = _FakeServer([_player("a"), _player("b")], finish_after=0.05)
-    seq = GameSequence(server, delay=0.0)
+    seq = GameSequence(server, continue_timeout=0.0)
 
     seq.start("a")
     seq.start("b")
@@ -97,7 +97,7 @@ def test_sequence_players_progress_independently() -> None:
         [_player("fast"), _player("slow")],
         finish_delays={"fast": 0.01, "slow": 5.0},
     )
-    seq = GameSequence(server, delay=0.0)
+    seq = GameSequence(server, continue_timeout=0.0)
 
     seq.start("fast")
     seq.start("slow")
@@ -118,7 +118,7 @@ def test_sequence_aborts_for_disconnected_player() -> None:
     it and the sequence stops after one start_game call.
     """
     server = _FakeServer([_player("t1", connected=False)])
-    seq = GameSequence(server, delay=0.0)
+    seq = GameSequence(server, continue_timeout=0.0)
 
     seq.start("t1")
     seq.join(timeout=5)
@@ -132,7 +132,7 @@ def test_sequence_aborts_for_disconnected_player() -> None:
 def test_start_is_noop_when_already_running() -> None:
     # A server whose games never finish keeps the sequence stuck in _wait_until_done.
     server = _FakeServer([_player("t1")], finish_after=10.0)
-    seq = GameSequence(server, delay=0.0)
+    seq = GameSequence(server, continue_timeout=0.0)
 
     seq.start("t1")
     time.sleep(0.2)
@@ -147,7 +147,7 @@ def test_start_is_noop_when_already_running() -> None:
 
 def test_start_for_different_tokens_run_concurrently() -> None:
     server = _FakeServer([_player("a"), _player("b")], finish_after=10.0)
-    seq = GameSequence(server, delay=0.0)
+    seq = GameSequence(server, continue_timeout=0.0)
 
     seq.start("a")
     seq.start("b")  # different token, should NOT be a no-op
@@ -165,7 +165,7 @@ def test_sequence_aborts_when_manual_start_overtakes() -> None:
     """
     player = _player("t1")
     server = _FakeServer([player], finish_after=10.0)  # long so the game is "running"
-    seq = GameSequence(server, delay=0.0)
+    seq = GameSequence(server, continue_timeout=0.0)
 
     seq.start("t1")
     time.sleep(0.2)  # let the first game (DINO_JUMP) start
@@ -180,3 +180,43 @@ def test_sequence_aborts_when_manual_start_overtakes() -> None:
 
     # S button should be available again
     assert not seq.is_running("t1")
+
+
+def test_sequence_continues_on_bci_continue() -> None:
+    """The sequence proceeds immediately when the BCI sends CONTINUE between games."""
+    player = _player("t1")
+    server = _FakeServer([player], finish_after=0.05)
+    seq = GameSequence(server, continue_timeout=30.0)  # long timeout; we'll trigger manually
+
+    # Background thread that sends CONTINUE whenever the sequence is waiting
+    stop_thread = threading.Event()
+
+    def send_continue() -> None:
+        while not stop_thread.is_set():
+            time.sleep(0.1)
+            if not player.game and not player.pending_start and seq.is_running("t1"):
+                player.continue_event.set()
+
+    t = threading.Thread(target=send_continue, daemon=True)
+    t.start()
+
+    seq.start("t1")
+    seq.join(timeout=10)
+    stop_thread.set()
+
+    assert not seq.is_running("t1")
+    assert [gt for _, gt in server.calls] == SEQUENCE
+
+
+def test_sequence_auto_continues_on_timeout() -> None:
+    """The sequence auto-continues after the timeout if no CONTINUE is received."""
+    player = _player("t1")
+    server = _FakeServer([player], finish_after=0.05)
+    seq = GameSequence(server, continue_timeout=0.5)  # short timeout
+
+    seq.start("t1")
+    seq.join(timeout=15)
+    assert not seq.is_running("t1")
+
+    # Should have run the full sequence
+    assert [gt for _, gt in server.calls] == SEQUENCE

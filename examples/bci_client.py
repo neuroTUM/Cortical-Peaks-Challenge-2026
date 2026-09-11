@@ -129,6 +129,8 @@ def main() -> None:
                     cmd = "INPUT_C"
                 elif event.key == pygame.K_RIGHT:
                     cmd = "INPUT_D"
+                elif event.key == pygame.K_SPACE:
+                    cmd = "CONTINUE"
                 if cmd:
                     bci.send_command(cmd)
                     prev_cmd = cmd

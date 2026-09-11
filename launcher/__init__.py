@@ -312,27 +312,35 @@ def _fmt_score(score: float) -> str:
 def _draw_waiting_screen(surface: pygame.Surface, screen: pygame.Surface) -> None:
     """Render the between-games waiting screen.
 
+    Shows a countdown timer and a prompt to send CONTINUE.
     In admin mode with quick-switch on, a sequence leaderboard table is shown instead
     of the single-score summary.
     """
     fill_surface(surface)
 
+    countdown = spectator_client.continue_countdown
+
     if spectator_client.admin_mode and spectator_client.quick_switch:
         _draw_sequence_leaderboard(surface)
-        _spectator_overlay(surface)
-        scale_to_screen(surface, screen)
-        return
+    else:
+        message = "WAITING FOR NEXT GAME TO START"
+        txt = TEXT_FONT.render(message, True, TEXT_COLOR)
+        surface.blit(txt, txt.get_rect(center=Grid.pos(6, 4)))
+        if spectator_client.last_score:
+            score_txt = HEADING_FONT.render(
+                f"{spectator_client.last_username}: {spectator_client.last_score} points",
+                True,
+                HIGHLIGHT_COLOR,
+            )
+            surface.blit(score_txt, score_txt.get_rect(center=Grid.pos(6, 6)))
 
-    message = "WAITING FOR NEXT GAME TO START"
-    txt = TEXT_FONT.render(message, True, TEXT_COLOR)
-    surface.blit(txt, txt.get_rect(center=Grid.pos(6, 4)))
-    if spectator_client.last_score:
-        score_txt = HEADING_FONT.render(
-            f"{spectator_client.last_username}: {spectator_client.last_score} points",
-            True,
-            HIGHLIGHT_COLOR,
-        )
-        surface.blit(score_txt, score_txt.get_rect(center=Grid.pos(6, 6)))
+    # Countdown and continue prompt — shown in all modes while waiting between games.
+    if countdown > 0:
+        prompt = TEXT_FONT.render("Send CONTINUE command to start game", True, ACCENT_COLOR)
+        surface.blit(prompt, prompt.get_rect(center=Grid.pos(6, 9)))
+        timer_txt = HEADING_FONT.render(f"{int(countdown) + 1}s", True, HIGHLIGHT_COLOR)
+        surface.blit(timer_txt, timer_txt.get_rect(center=Grid.pos(6, 10)))
+
     _spectator_overlay(surface)
     scale_to_screen(surface, screen)
 

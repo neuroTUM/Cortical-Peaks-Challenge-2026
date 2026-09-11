@@ -35,6 +35,8 @@ _SEQUENCE_GAME_COLUMNS: dict[GameType, str] = {
     GameType.SKI_DYN: "ski_dyn",
 }
 
+_CONTINUE_TIMEOUT: float = 45.0
+
 
 class SpectatorClient:
     """Manages viewer registration, session subscription, heartbeats, and state deserialization."""
@@ -78,6 +80,7 @@ class SpectatorClient:
         self.admin_mode: bool = False  # admin spectator: shows sequence leaderboard overlay
         self.switching: bool = False  # True after switch_bci until new state arrives
         self.sequence_scores: dict[str, dict[str, str | float]] = {}  # uid -> per-game scores
+        self.continue_deadline: float = 0.0  # time.time() deadline for the between-games continue wait
 
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -158,7 +161,10 @@ class SpectatorClient:
     def await_next_game(
         self, score: str = "", username: str = "", game: GameType | None = None, uid: str | None = None
     ) -> None:
-        """Drop the finished game but stay subscribed, storing the score for the waiting screen."""
+        """Drop the finished game but stay subscribed, storing the score for the waiting screen.
+
+        Also starts a 45s countdown for the continue-wait between sequence games.
+        """
         self.last_score = score
         self.last_username = username
         if self.admin_mode and game is not None and uid is not None:
@@ -167,6 +173,12 @@ class SpectatorClient:
         self.latest_dino_state = None
         self.latest_pong_state = None
         self.latest_ski_state = None
+        self.continue_deadline = time.time() + _CONTINUE_TIMEOUT
+
+    @property
+    def continue_countdown(self) -> float:
+        """Seconds remaining on the between-games continue wait, or 0 if expired."""
+        return max(0.0, self.continue_deadline - time.time())
 
     def _record_sequence_score(self, uid: str, name: str, game: GameType, score: str) -> None:
         """Accumulate per-player sequence scores for the admin leaderboard."""

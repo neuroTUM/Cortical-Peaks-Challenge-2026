@@ -20,7 +20,7 @@ SEQUENCE: list[GameType] = [
     GameType.SKI_DYN,
 ]
 
-_DEFAULT_DELAY: float = 10.0
+_CONTINUE_TIMEOUT: float = 45.0
 
 
 class _SequenceServer(Protocol):
@@ -35,19 +35,19 @@ class GameSequence:
 
     ``start(token)`` spawns one background thread that walks the sequence for that
     player only: it starts a game via ``server.start_game``, waits until that player's
-    game ends (``player.game`` returns to ``None``), then waits ``delay`` seconds
-    before starting the next game. Each call is independent per player.
+    game ends (``player.game`` returns to ``None``), then waits for a ``CONTINUE`` BCI
+    command (or ``continue_timeout`` seconds) before starting the next game.
     """
 
     def __init__(
         self,
         server: _SequenceServer,
         sequence: list[GameType] | None = None,
-        delay: float = _DEFAULT_DELAY,
+        continue_timeout: float = _CONTINUE_TIMEOUT,
     ) -> None:
         self._server = server
         self._sequence = sequence if sequence is not None else SEQUENCE
-        self._delay = delay
+        self._continue_timeout = continue_timeout
         self._threads: dict[str, threading.Thread] = {}
         self._stop = threading.Event()
 
@@ -90,9 +90,36 @@ class GameSequence:
                 break
             if self._stop.is_set():
                 break
-            log.info("Game sequence [%s]: %s finished, waiting %.0fs before next game", token, game_type, self._delay)
-            self._sleep(self._delay)
+            log.info("Game sequence [%s]: %s finished, waiting for CONTINUE", token, game_type)
+            if not self._wait_for_continue(token):
+                break
         log.info("Game sequence [%s]: complete", token)
+
+    def _wait_for_continue(self, token: str) -> bool:
+        """Wait for the BCI to send CONTINUE, or auto-continue after the timeout.
+
+        Returns False if the sequence was stopped or the player disconnected.
+        """
+        players, _ = self._server.snapshot_players_viewers()
+        player = next((p for p in players if p.bci_token == token), None)
+        if player is None:
+            return False
+        player.continue_event.clear()
+        deadline = time.time() + self._continue_timeout
+        while not self._stop.is_set():
+            remaining = max(0.0, deadline - time.time())
+            if remaining <= 0:
+                log.info("Game sequence [%s]: continue timeout, auto-continuing", token)
+                return True
+            if player.continue_event.wait(timeout=min(1.0, remaining)):
+                log.info("Game sequence [%s]: CONTINUE received", token)
+                return True
+            players, _ = self._server.snapshot_players_viewers()
+            p = next((x for x in players if x.bci_token == token), None)
+            if p is None or not p.bci.is_connected:
+                log.warning("Game sequence [%s]: player disconnected during continue wait", token)
+                return False
+        return False
 
     def _wait_until_done(self, token: str, expected_game: GameType) -> bool:
         """Block until the player's game has ended.
@@ -117,11 +144,6 @@ class GameSequence:
                 return True
             time.sleep(0.5)
         return False
-
-    def _sleep(self, seconds: float) -> None:
-        deadline = time.time() + seconds
-        while not self._stop.is_set() and time.time() < deadline:
-            time.sleep(0.2)
 
 
 _sequence: GameSequence | None = None

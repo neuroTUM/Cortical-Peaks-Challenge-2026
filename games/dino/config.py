@@ -43,7 +43,7 @@ class DinoConfig:
     # Frame counts derive from FPS so the real-world durations stay correct if the tick rate changes.
     # 1.9s: long enough that the bird safe-press window exceeds the dino width, which keeps the bird
     # carpet touch-exact (any pixel of the dino on the strip clears the bird).
-    duck_duration: int = 24 * FPS // 10
+    duck_duration: int = 28 * FPS // 10
     spawn_interval: int = 8 * FPS  # 8 seconds between obstacles
     max_obstacles: int = 100
     time_limit: int = 180 * FPS  # 3 minutes

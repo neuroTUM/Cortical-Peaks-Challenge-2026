@@ -85,6 +85,7 @@ class Player:
         self.game: GameType | None = None
         self.in_match: bool = False
         self.pending_start: GameType | None = None  # set by server operator, cleared by worker
+        self.continue_event: threading.Event = threading.Event()  # set by BCI "CONTINUE" between games
 
     @property
     def is_ready(self) -> bool:
@@ -242,9 +243,14 @@ class GameServer(threading.Thread):
                                     player.bci.is_connected = True
                                     self.push_sessions()
                                     log.info("[%s] BCI reconnected via CMD", token)
-                                game_label = player.game.value if player.game else None
-                                audit.record("input", token=token, cmd=content, game=game_label)
-                                player.queue.put(("bci", content))
+                                if content == "CONTINUE":
+                                    player.continue_event.set()
+                                    audit.record("input", token=token, cmd=content, game=None)
+                                    log.info("[%s] CONTINUE received", token)
+                                else:
+                                    game_label = player.game.value if player.game else None
+                                    audit.record("input", token=token, cmd=content, game=game_label)
+                                    player.queue.put(("bci", content))
 
                 except Exception:
                     log.exception("Error handling message from %s", addr)
